@@ -1,0 +1,17 @@
+streamlit
+pandas
+numpy
+matplotlib
+datetime
+pillow
+plotly
+click
+kaleido
+more-itertools
+pip
+pytest
+streamlit
+streamlit-aggrid
+streamlit-option-menu
+autopep8
+email_validator
