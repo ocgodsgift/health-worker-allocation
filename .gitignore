@@ -133,5 +133,4 @@ dmypy.json
 .streamlit/secrets.toml
 *.pdf
 tmp.Dockerfile
-*.png
 *.docx
