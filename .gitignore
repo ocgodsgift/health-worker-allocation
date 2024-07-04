@@ -134,3 +134,4 @@ dmypy.json
 *.pdf
 tmp.Dockerfile
 *.docx
+a.png
