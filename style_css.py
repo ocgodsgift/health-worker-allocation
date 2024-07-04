@@ -8,7 +8,7 @@ def style():
             """
         <style>
             .main {
-                max-width: 90%;
+                max-width: 80%;
                 margin-left: auto;
                 margin-right: auto;
                 margin-top: 0;
