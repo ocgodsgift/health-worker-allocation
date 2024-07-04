@@ -30,20 +30,20 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 with st.sidebar:
     choose = option_menu(
         "Main Menu",
-        ["Home", "Health Workers Allocation", "Oupatient Scenario", "About", "Contact"],
+        ["Home", "Health Workers Allocation", "Outpatient Scenario", "About", "Contact"],
         icons=["house", "app-indicator", "", "person lines fill", ""],
         menu_icon="list",
         default_index=0,
         styles={
-            "container": {"padding": "5!important", "background-color": "white"},
-            "icon": {"color": "green", "font-size": "20px"},
+            "container": {"padding": "5!important", "background-color": "#008000"},
+            "icon": {"color": "orange", "font-size": "25px"},
             "nav-link": {
-                "font-size": "12px",
+                "font-size": "16px",
                 "text-align": "left",
                 "margin": "0px",
-                "--hover-color": "grey",
+                "--hover-color": "#ADD8E6",
             },
-            "nav-link-selected": {"background-color": "black"},
+            "nav-link-selected": {"background-color": "#00008B"},
         },
     )
 
@@ -53,12 +53,12 @@ if choose == "Home":
     st.image("EdoDIDa.png", width=300)
     st.title("Welcome To EdoDida")
     st.write(
-       """
-       Welcome to Edo State Digital and Data Agency (EdoDiDa) Integrated Data and Analytics platform, the one-stop data and analytics playground.
-       The EdoDiDa integrated data governance and decision intelligence platform delivers comprehensive data and analytics solutions designed to
-       empower the Edo State government. Our platform supports evidence-based planning, promotes inclusive socio-economic development,
-       and facilitates equitable resource allocation.
-       """
+        """
+        Welcome to Edo State Digital and Data Agency (EdoDiDa) Integrated Data and Analytics platform, the one-stop data and analytics playground.
+        The EdoDiDa integrated data governance and decision intelligence platform delivers comprehensive data and analytics solutions designed to
+        empower the Edo State government. Our platform supports evidence-based planning, promotes inclusive socio-economic development,
+        and facilitates equitable resource allocation.
+        """
     )
 
 
@@ -83,7 +83,7 @@ elif choose == "Health Workers Allocation":
 
         """
     )
-    
+
     st.divider()
 
     st.write('#### Select Allocation Option:')
@@ -92,24 +92,27 @@ elif choose == "Health Workers Allocation":
         ('State-Wide Coverage',
          'LGA Coverage'),
         index=0
-        )
+    )
 
+    # Function to calculate coverage percentage
+    def calculate_coverage(doctors, nurses, population):
+        doctors_per_10000 = (doctors / population) * 10000
+        nurses_per_10000 = (nurses / population) * 10000
+        return doctors_per_10000 + nurses_per_10000
+
+    # Function to calculate new coverage based on additional health workers
+    def new_coverage(current_doctors, current_nurses, additional_doctors, additional_nurses, population):
+        new_doctors = current_doctors + additional_doctors
+        new_nurses = current_nurses + additional_nurses
+        return calculate_coverage(new_doctors, new_nurses, population)
+
+    WHO_STANDARD = 44.5
 
     if option == "State-Wide Coverage":
         st.write('Your selected option is: ', option)
 
         df = pd.read_csv('health_workers.csv')
-
-        df = df[['LGA','Doctors','Nurses','Population']]
-
-        # Constants
-        WHO_STANDARD = 44.5
-
-        # Function to calculate coverage
-        def calculate_coverage(doctors, nurses, population):
-            doctors_per_10000 = (doctors / population) * 10000
-            nurses_per_10000 = (nurses / population) * 10000
-            return doctors_per_10000 + nurses_per_10000
+        df = df[['LGA', 'Doctors', 'Nurses', 'Population']]
 
         # Calculate initial coverage
         df['Coverage'] = df.apply(lambda row: calculate_coverage(row['Doctors'], row['Nurses'], row['Population']), axis=1)
@@ -124,54 +127,55 @@ elif choose == "Health Workers Allocation":
 
         # State-wide calculations
         total_population = df['Population'].sum()
-        total_doctors = df['Doctors'].sum() + state_additional_doctors
-        total_nurses = df['Nurses'].sum() + state_additional_nurses
+        total_doctors = df['Doctors'].sum()
+        total_nurses = df['Nurses'].sum()
         state_coverage = calculate_coverage(total_doctors, total_nurses, total_population)
-        state_status = 'Meets WHO Standard' if state_coverage >= WHO_STANDARD else 'Below WHO Standard'
+        new_state_coverage = new_coverage(total_doctors, total_nurses, state_additional_doctors, state_additional_nurses, total_population)
+        state_status = 'Meets WHO Standard' if new_state_coverage >= WHO_STANDARD else 'Below WHO Standard'
 
         # Display results
         st.subheader('Current Health Workforce Data by LGA')
         st.dataframe(df)
 
         st.subheader('State-Wide Coverage')
-        state_data = {
+        current_state_data = {
             'Total Population': [total_population],
             'Total Doctors': [total_doctors],
             'Total Nurses': [total_nurses],
-            'State-wide Coverage': [state_coverage],
+            'Current State-wide Coverage': [state_coverage]
+        }
+        current_state_df = pd.DataFrame(current_state_data)
+        st.dataframe(current_state_df)
+
+        st.subheader('Estimated State-Wide Coverage with Additional Health Workers')
+        estimated_state_data = {
+            'Total Population': [total_population],
+            'Total Doctors': [total_doctors + state_additional_doctors],
+            'Total Nurses': [total_nurses + state_additional_nurses],
+            'Estimated State-wide Coverage': [new_state_coverage],
             'Status': [state_status]
         }
-        state_df = pd.DataFrame(state_data)
-        st.dataframe(state_df)
+        estimated_state_df = pd.DataFrame(estimated_state_data)
+        st.dataframe(estimated_state_df)
 
-        st.write(f"The state-wide coverage is {state_coverage:.2f}.")
+        #st.write(f"The estimated state-wide coverage is {new_state_coverage:.2f}.")
         st.write(f"Status: {state_status}")
 
-        if state_coverage > 100:
-            st.error(f"The new coverage of {state_coverage:.2f}% exceeds 100%. Please check the input values.")
-        elif state_coverage < WHO_STANDARD:
-            st.error(f"The new coverage of {state_coverage:.2f}% is below the WHO standard of {WHO_STANDARD}%.")
+        if state_additional_doctors > 0 and state_additional_nurses > 0:
+            if new_state_coverage > 100:
+                st.error(f"The new coverage of {new_state_coverage:.2f}% exceeds 100%. Please check the input values.")
+            elif new_state_coverage < WHO_STANDARD:
+                st.error(f"The new coverage of {new_state_coverage:.2f}% is below the WHO standard of {WHO_STANDARD}%.")
+            else:
+                st.success(f"The new coverage of {new_state_coverage:.2f}% meets the WHO standard of {WHO_STANDARD}%.")
         else:
-            st.success(f"The new coverage of {state_coverage:.2f}% for meets the WHO standard of {WHO_STANDARD}%.")
-
+            st.info("Please provide both the number of additional doctors and nurses to calculate the new coverage.")
 
     elif option == "LGA Coverage":
         st.write('Your selected option is: ', option)
 
         df = pd.read_csv('health_workers.csv')
-
-        df = df[['LGA','Doctors','Nurses','Population']]
-
-        # Constants
-        WHO_STANDARD = 44.5
-
-        # Generate random dataset
-
-        # Function to calculate coverage percentage
-        def calculate_coverage(doctors, nurses, population):
-            doctors_per_10000 = (doctors / population) * 10000
-            nurses_per_10000 = (nurses / population) * 10000
-            return doctors_per_10000 + nurses_per_10000
+        df = df[['LGA', 'Doctors', 'Nurses', 'Population']]
 
         # Calculate initial coverage
         df['Coverage'] = df.apply(lambda row: calculate_coverage(row['Doctors'], row['Nurses'], row['Population']), axis=1)
@@ -188,12 +192,10 @@ elif choose == "Health Workers Allocation":
         lga_data = df[df['LGA'] == selected_lga].iloc[0]
 
         # Calculate new values
-        new_doctors = lga_data['Doctors'] + additional_doctors
-        new_nurses = lga_data['Nurses'] + additional_nurses
-        new_coverage = calculate_coverage(new_doctors, new_nurses, lga_data['Population'])
+        new_coverage_value = new_coverage(lga_data['Doctors'], lga_data['Nurses'], additional_doctors, additional_nurses, lga_data['Population'])
 
         # Check WHO standard and limits
-        coverage_status = 'Meets WHO Standard' if new_coverage >= WHO_STANDARD else 'Below WHO Standard'
+        coverage_status = 'Meets WHO Standard' if new_coverage_value >= WHO_STANDARD else 'Below WHO Standard'
 
         st.subheader("Current Health Workers Coverage")
 
@@ -208,33 +210,34 @@ elif choose == "Health Workers Allocation":
         current_data_df = pd.DataFrame(current_data_df)
         st.dataframe(current_data_df)
 
-        # Display results
-        st.subheader('Health Workers Coverage')
-        updated_data = {
+        st.subheader('Estimated Health Workers Coverage with Additional Health Workers')
+        estimated_data = {
             'LGA': [selected_lga],
             'Population': [lga_data['Population']],
-            'New Doctors': [new_doctors],
-            'New Nurses': [new_nurses],
-            'New Coverage (%)': [np.round(new_coverage, 2)],
+            'New Doctors': [lga_data['Doctors'] + additional_doctors],
+            'New Nurses': [lga_data['Nurses'] + additional_nurses],
+            'Estimated Coverage (%)': [np.round(new_coverage_value, 2)],
             'Status': [coverage_status]
         }
-        updated_df = pd.DataFrame(updated_data)
-        st.dataframe(updated_df)
+        estimated_data_df = pd.DataFrame(estimated_data)
+        st.dataframe(estimated_data_df)
 
-        if new_coverage > 100:
-            st.error(f"The new coverage of {new_coverage:.2f}% for {selected_lga} exceeds 100%. Please check the input values.")
-        elif new_coverage < WHO_STANDARD:
-            st.error(f"The new coverage of {new_coverage:.2f}% for {selected_lga} is below the WHO standard of {WHO_STANDARD}%.")
+        #st.write(f"The estimated coverage for {selected_lga} is {new_coverage_value:.2f}%.")
+        st.write(f"Status: {coverage_status}")
+
+        if additional_doctors > 0 and additional_nurses > 0:
+            if new_coverage_value > 100:
+                st.error(f"The new coverage of {new_coverage_value:.2f}% exceeds 100%. Please check the input values.")
+            elif new_coverage_value < WHO_STANDARD:
+                st.error(f"The new coverage of {new_coverage_value:.2f}% for {selected_lga} is below the WHO standard of {WHO_STANDARD}%.")
+            else:
+                st.success(f"The new coverage of {new_coverage_value:.2f}% for {selected_lga} meets the WHO standard of {WHO_STANDARD}%.")
         else:
-            st.success(f"The new coverage of {new_coverage:.2f}% for {selected_lga} meets the WHO standard of {WHO_STANDARD}%.")
+            st.info("Please provide both the number of additional doctors and nurses to calculate the new coverage.")
 
-    st.write("""
-                #### Overall Health Workers:
-                To achieve good healthcare coverage, there should be at least 44.5 health workers (including doctors and nurses) for every 10,000 people.
-            """)
-    
+    st.divider()
 
-elif choose == "Oupatient Scenario":
+elif choose == "Outpatient Scenario":
     # Load the data
     df = pd.read_csv('analysis.csv')
 
@@ -297,21 +300,21 @@ elif choose == "Oupatient Scenario":
         reduction = int(reduction)
         current_attendance = int(current_attendance)
         new_attendance = int(new_attendance)
-        
+
         explanation = f"In the LGA {lga}, increasing the number of PHCs from {current_phc} to {new_phc} results in an estimated outpatient attendance reduction from {current_attendance} to {new_attendance}. "
-        
+
         if new_attendance == 0:
             explanation += f"This achieves a complete reduction in outpatient attendance, indicating that the increased PHCs are sufficient to meet the healthcare needs of the population."
         else:
             explanation += f"This represents a reduction of {reduction} in outpatient visits, which is a {reduction_percentage:.2f}% decrease. "
-            
+
             if reduction_percentage > 50:
                 explanation += "This substantial decrease suggests that the additional PHCs significantly improve healthcare access and reduce patient load."
             elif reduction_percentage > 20:
                 explanation += "This moderate decrease indicates improved healthcare access but may suggest a need for further increases in PHCs to achieve optimal results."
             else:
                 explanation += "This small decrease indicates that while the additional PHCs help, further measures might be necessary to substantially reduce outpatient attendance."
-        
+
         return explanation
 
     # Generate explanation for the selected LGA
