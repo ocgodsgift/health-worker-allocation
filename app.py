@@ -4,6 +4,13 @@ from style_css import style
 import pandas as pd
 import numpy as np
 from slideshow import slideshow
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.linear_model import LinearRegression
+from datetime import datetime as t
+from datetime import time
+
 
 # Setup and styling
 st.set_page_config(
@@ -27,8 +34,8 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 with st.sidebar:
     choose = option_menu(
         "Main Menu",
-        ["Home", "Health", "Education", "About", "Contact"],
-        icons=["house", "heart", "book", "pen", "phone"],
+        ["Home", "Health", "Education", "Agriculture", "About", "Contact"],
+        icons=["house", "heart", "book", "tree", "pen", "phone"],
         menu_icon="list",
         default_index=0,
         styles={
@@ -58,6 +65,7 @@ if choose == "Home":
             """
         )
     st.divider()
+
     slideshow()
 
 
@@ -199,7 +207,7 @@ elif choose == "Health":
 
     elif option == "OutPatient Scenario":
 
-        from sklearn.ensemble import RandomForestRegressor
+
         # Load the data
         df = pd.read_csv('outpateince.csv')
 
@@ -306,7 +314,6 @@ elif choose == "Health":
     elif option == "Health Insurance":
 
         df = pd.read_excel('health_insurance.xlsx')
-        from sklearn.linear_model import LinearRegression
 
         # Sidebar title and header
         st.sidebar.title("EHIC Scenario Analysis")
@@ -434,12 +441,190 @@ elif choose == "Education":
     st.write("#### SSS Teachers' Distribution Accross the 18 LGAs")
     st.bar_chart(lga_ta.set_index('LGA')['total_teachers'])
 
+elif choose == "Agriculture":
+
+    # Importing tables
+    table1 = pd.read_excel("Farmers Poverty Classified data.xlsx")
+    loan = pd.read_excel("FARMERS WITH CROPS CLEANED UPDATED V1.xlsx", sheet_name = "LOAN")
+    farm_type = pd.read_excel("FARMERS WITH CROPS CLEANED UPDATED V1.xlsx", sheet_name = 'farm_type')
+
+    # Adding the information from 'Other - Educational Level', to the 'Educational Level' column
+    cond = table1["Educational Level"] == 'Other'
+    table1.loc[cond, 'Educational Level'] = table1.loc[cond, 'Other - Educational Level']
+
+    # Merging the tables
+    merg1 = table1.merge(loan, how = 'left', left_on = 'ID',right_on = 'ID')
+    merged = merg1.merge(farm_type, how = 'left', left_on = 'ID',right_on = 'ID')
+
+    def farmer_age(date):
+        today = t.today
+        age = today().year - date.year  - ((today().month, today().day) < (date.month, date.day))
+        return age
+
+    # grouping the age
+    def age_group(df, age):
+        bins = [0,30,50,120]
+        labels = ['Young','Adult','Aged']
+        df['Age group'] = pd.cut(df[age], bins = bins, labels = labels)
+        return df
+
+
+    def mappings(map_df):
+        ed = {'Primary School':1,'Secondary School':2,'Other':0,'Tertiary':3,'Post Graduate':3,'Primary school':1,'Teachers Training':3,'Uneducated':0,'Technical college':2,'Informal education':1}
+        bank = {'No':0,'Yes':1}
+        ID = {'yes':1,'No':0}
+        land = {'Rental':1,'Others':1,'Owner':2}
+        sfarm = {'Large (6 Acre and above)':3,'Medium (1-6 Acre)':2,'Small (Less than 1 Acre)':1}
+        mainc = {'Agriculture':1,'Others':0}
+        agr = {'Crop':1,'Crop and Livestock':1,'Aquaculture':1,'Livestock':1,'Crop and Aquaculture':1,'Crop, Aquaculture and Livestock':1}
+        coop = {'No':0,'Yes':1}
+        noag = {"'4-7'":2,"'1-3'":1,"'8-11'":3}
+        agem = {'Young':1,'Adult':3,'Aged':2}
+        incom = {'0-100k':1,'100k-1m':2,'1m-10m':3,'10m-100m':4,'100m-500m':5,'500m and above':6}
+        loan = {'yes':1}
+        food ={'yes':1}
+        cash = {'yes':1}
+        Aqu = {'yes':1}
+        Ls = {'yes':1}
+        
+        var = ['Educational Level','Do you have a bank account?','Identification','Type of Land Tenure',
+        'Size of Farm','Major Source of Income(Agriculture)',"Agriculture Activity Engaged",
+        'Are you in a cooperative?',"No. of Agricultural Activity Group","Age group","Income range",'loan',
+        'Food','Cash','Aquatic','Livestock']
+
+        map_ = [ed,bank,ID,land,sfarm,mainc,agr,coop,noag,agem,incom,loan,food,cash,Aqu,Ls]
+        for i,j in zip(var,map_):
+            map_df.loc[:,i] = map_df[i].map(j).fillna(0)
+        return map_df
+
+    #adding weights to the variables
+    def weights(df):
+        #Financial, Bank and Loan info
+        df[["Income range","Do you have a bank account?","Identification","loan"]] = df[["Income range","Do you have a bank account?","Identification","loan"]] * 4
+
+        #Farm land Information
+        df[["Type of Land Tenure","Size of Farm"]] = df[["Type of Land Tenure","Size of Farm"]] * 3
+
+        #Agricultural Activity
+        df[["Major Source of Income(Agriculture)","Agriculture Activity Engaged","Food",
+                "Cash","Aquatic","Livestock"]] = df[["Major Source of Income(Agriculture)","Agriculture Activity Engaged",
+                                                        "Food","Cash","Aquatic","Livestock"]] * 2
+        return df
+
+
+    var = ['Educational Level','Do you have a bank account?','Identification','Type of Land Tenure',
+        'Size of Farm','Major Source of Income(Agriculture)',"Agriculture Activity Engaged",
+        'Are you in a cooperative?',"No. of Agricultural Activity Group","Age group","Income range",'loan',
+        'Food','Cash','Aquatic','Livestock']
+
+    # Drop all rows where the 'Date of Birth' and the 'Average Annual Income' empty.
+    merged.dropna(subset = ["Date of Birth","Average Annual Income"], inplace = True)
+
+    # Drop rows with bad date type
+    row = merged['Date of Birth'].apply(lambda x: isinstance(x, time))
+    merged = merged[~row]
+
+    # Extracting the ages from the dtae column
+    merged["Age"] = merged["Date of Birth"].apply(lambda x: farmer_age(x) if pd.notnull(x) else None)
+
+    # Creating age group column
+    merged = age_group(merged, 'Age')
+    #merged["Age group"] = merged['Age'].apply(age_group)
+
+    # change the data types to strings
+    merged['No. of Agricultural Activity Group'] = merged['No. of Agricultural Activity Group'].astype('str')
+    merged['Age group'] = merged['Age group'].astype('str')
+
+    farmers = merged[var]
+    farmers = mappings(farmers)
+    farmers = weights(farmers)
+
+    # Summing up all the the rows to create a credit score column
+    farmers["credit_score"] = farmers[:].sum(axis = 1)
+
+    # selecting the target and the independent variables.
+    X = farmers.drop(["credit_score"], axis = 1)
+    y = farmers.credit_score
+
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    model = RandomForestRegressor(n_estimators=100)
+    model.fit(X_train, y_train)
+
+    # Making predictions
+    y_pred = model.predict(X_test)
+
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    #print(f"Mean Squared Error: {mse}")
+    #print(f"R^2 Score: {r2}")
+    edu_level = ['Pre-primary','Primary School','Secondary School','Teachers Training','Tertiary','Post Graduate','Technical college','Informal education']
+    bank_acc = ['No','Yes']
+    ID = ['Yes','No']
+    land_ten = ['Rental', 'Others', 'Owner']
+    farm_size = ['Large (6 Acre and above)', 'Medium (1-6 Acre)','Small (Less than 1 Acre)']
+    agric_incom_source = ['Agriculture', 'Others']
+    agric_activity = ['Crop', 'Crop and Livestock', 'Aquaculture', 'Livestock','Crop and Aquaculture', 'Crop, Aquaculture and Livestock','Crop ']
+    cooperative = ['No', 'Yes']
+    No_agric_activity = ["'4-7'","'1-3'","'8-11'"]
+    Incom = ['100k-1m', '0-100k','1m-10m', '10m-100m', '100m-500m','500m and above']
+    loan = ['yes','no']
+    Food = ['yes','no']
+    Cash = ['yes','no']
+    Aquatic = ['yes','no']
+    Livestock = ['yes','no']
+
+
+    st.title("Farmer Credit Scoring System")
+
+
+    with st.form(key='my_form'):
+        ag = st.number_input("How old are you?", value = 0)
+        edu = st.selectbox("Educational Level", edu_level)
+        bank = st.selectbox("Do you have a bank account?", bank_acc)
+        id_ = st.selectbox("Do you have a mode of Identification (ID card)?", ID)
+        ten = st.selectbox("Do you own your farmland?", land_ten)
+        farmsize = st.selectbox("What is the size of your farm land?", farm_size)
+        incsource = st.selectbox("What is your major source of income?", agric_incom_source)
+        agactivity = st.selectbox("What king Agriculture do you practice?", agric_activity)
+        coop = st.selectbox("Are you a registered member of any Agricultural cooperative?", cooperative)
+        no_agractivity = st.selectbox("How many crop types/livestock types/Aquitic animal type do you farm?", No_agric_activity)
+        income = st.selectbox("What is your annual income range?", Incom)
+        lo = st.selectbox("Have you ever gotten a bank loan?", loan)
+        foo = st.selectbox("Do you farm food crops", Food)
+        cas = st.selectbox("Do you farm cash crops", Cash)
+        aqu = st.selectbox("Do you do aquatic farming", Aquatic)
+        livest = st.selectbox("Do you do livestock farming", Livestock)
+
+        submit_button = st.form_submit_button(label='Submit')
+
+    if submit_button:
+
+        # Creating a new form
+        form = {'Educational Level':[edu],'Do you have a bank account?':[bank],'Identification':[id_],
+                'Type of Land Tenure':[ten],'Size of Farm':[farmsize],
+                'Major Source of Income(Agriculture)':[incsource],
+                "Agriculture Activity Engaged":[agactivity],'Are you in a cooperative?':[coop],
+                "No. of Agricultural Activity Group":[no_agractivity],"Age group":[ag],"Income range":[income],
+                'loan':[lo],'Food':[foo],'Cash':[cas],'Aquatic':[aqu],'Livestock':[livest]}
+
+        # Applying the processing functions on the new form
+        form = pd.DataFrame(form)
+        form = age_group(form,'Age group')
+        form['Age group'] = form['Age group'].astype('str')
+        form = mappings(form)
+
+        pred = model.predict(form)
+        st.write(f'Your Credit score is {pred[0]}')
+
+
 elif choose == "About":
     pass
 
 elif choose == "Contact":
     pass
-
 
 # the footer and more information
 st.divider()
