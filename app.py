@@ -101,7 +101,7 @@ elif choose == "Health":
 
             """
         )
-        
+
         st.divider()
 
         # Load dataset
@@ -137,6 +137,7 @@ elif choose == "Health":
             df['New Nurses'] = df['Nurses'] + df['Additional Nurses']
             df['New Coverage'] = df.apply(lambda row: calculate_coverage(row['New Doctors'], row['New Nurses'], row['Population']), axis=1)
 
+
             # State-wide calculations
             total_population = df['Population'].sum()
             total_doctors = df['New Doctors'].sum()
@@ -144,17 +145,21 @@ elif choose == "Health":
             state_coverage = calculate_coverage(total_doctors, total_nurses, total_population)
             state_status = 'Meets WHO Standard' if state_coverage >= WHO_STANDARD else 'Below WHO Standard'
 
+            def color_status(val):
+                color = 'green' if val == 'Meets WHO Standard' else 'red'
+                return f'color: {color}'
+
             # Display results
             st.write('#### State-Wide Coverage with Proposed Additions')
             state_data = {
                 'Total Population': [total_population],
                 'Total Doctors': [total_doctors],
                 'Total Nurses': [total_nurses],
-                'State-wide Coverage': [np.round(state_coverage, 2)],
+                'State-wide Coverage': [state_coverage],
                 'Status': [state_status]
             }
             state_df = pd.DataFrame(state_data)
-            st.dataframe(state_df.set_index('Total Population'))
+            st.dataframe(state_df.set_index('Total Population').style.applymap(color_status, subset=['Status']))
 
             # Display state-wide coverage status
             st.write('#### State-Wide Coverage with Proposed Additions')
@@ -168,45 +173,60 @@ elif choose == "Health":
             # Display health workforce data by LGA with proposed additions
             df['Status'] = df['New Coverage'].apply(lambda x: 'Meets WHO Standard' if x >= WHO_STANDARD else 'Below WHO Standard')
 
-            def color_status(val):
-                color = 'green' if val == 'Meets WHO Standard' else 'red'
-                return f'color: {color}'
 
             st.write('#### Health Workforce Data by LGA with Additions')
             st.dataframe(df[['LGA', 'Population', 'Doctors', 'Nurses', 'Additional Doctors', 'Additional Nurses', 'New Doctors', 'New Nurses', 'New Coverage', 'Status']].set_index('LGA').style.applymap(color_status, subset=['Status']))
-       
+
+            # Graphs
+            st.write('#### Visualizations')
+
+            # Bar chart for doctors and nurses
+            st.bar_chart(df.set_index('LGA')[['New Doctors', 'New Nurses']])
+
+            # Line chart for coverage
+            st.line_chart(df.set_index('LGA')['New Coverage'])
+
         else:
             total_population = df['Population'].sum()
             total_doctors = df['Doctors'].sum()
             total_nurses = df['Nurses'].sum()
             state_coverage = calculate_coverage(total_doctors, total_nurses, total_population)
+            state_coverage = round(state_coverage, 2)
             state_status = 'Meets WHO Standard' if state_coverage >= WHO_STANDARD else 'Below WHO Standard'
 
             state_data = {
                 'Total Population': [total_population],
                 'Total Doctors': [total_doctors],
                 'Total Nurses': [total_nurses],
-                'State-wide Coverage': [np.round(state_coverage, 2)],
+                'State-wide Coverage': [state_coverage],
                 'Status': [state_status]
             }
 
             state_df = pd.DataFrame(state_data)
 
-            # Displapy initial health workfoce state-wide
+            def color_status(val):
+                color = 'green' if val == 'Meets WHO Standard' else 'red'
+                return f'color: {color}'
+
+            # Display initial health workforce state-wide
             st.write('#### State Wide Workforce')
-            st.dataframe(state_df.set_index('Total Population'))
+            st.dataframe(state_df.set_index('Total Population').style.applymap(color_status, subset=['Status']))
 
             # Display initial health workforce data by LGA
+            for row in df.index:
+                df.at[row,'Status'] = 'Meets WHO Standard' if df.at[row,'Coverage'] >= WHO_STANDARD else 'Below WHO Standard'
+
             st.write('#### Health Workforce Data by LGA')
-            st.dataframe(df[['LGA', 'Population', 'Doctors', 'Nurses', 'Coverage']].set_index('LGA'))
+            st.dataframe(df[['LGA', 'Population', 'Doctors', 'Nurses', 'Coverage','Status']].set_index('LGA').style.applymap(color_status, subset=['Status']))
+
+        st.divider()
 
         st.write("""
-                #### Overall Health Workers:
-                To achieve good healthcare coverage, there should be at least 44.5 health workers (including doctors and nurses) for every 10,000 people.
-                """)
+            #### Overall Health Workers:
+            To achieve good healthcare coverage, there should be at least 44.5 health workers (including doctors and nurses) for every 10,000 people.
+            """)
 
     elif option == "OutPatient Scenario":
-
 
         # Load the data
         df = pd.read_csv('outpateince.csv')
