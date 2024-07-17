@@ -448,7 +448,7 @@ elif choose == "Health":
         selected_lga = st.sidebar.selectbox("Select LGA", df["LGA"])
 
         # Slider for enrollment rate adjustment
-        adjustment = st.sidebar.slider("Enrollment Rate Adjustment (%)", -50, 50, 5, 5)
+        adjustment = st.sidebar.slider("Enrollment Rate Adjustment (%)", 0, 100, 5, 5)
 
         # Predict function
         def predict_metrics(enrollment_rate_increase):
