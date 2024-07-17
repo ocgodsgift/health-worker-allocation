@@ -118,25 +118,31 @@ elif choose == "Health":
             return doctors_per_10000 + nurses_per_10000
 
         # Calculate initial coverage
-        df['Coverage'] = df.apply(lambda row: calculate_coverage(row['Doctors'], row['Nurses'], row['Population']), axis=1)
+        # df['Coverage'] = df.apply(lambda row: calculate_coverage(row['Doctors'], row['Nurses'], row['Population']), axis=1)
+
+        for row in df.index:
+            df.at[row,'Coverage'] = calculate_coverage(df.at[row,'Doctors'], df.at[row,'Nurses'], df.at[row,'Population'])
 
         # Streamlit UI
         # Sidebar state-wide adjustment inputs
-        st.sidebar.header('State-wide Adjustments')
+        st.sidebar.header('State Health Workers Additions')
         state_additional_doctors = st.sidebar.number_input('Additional Doctors (State-wide)', min_value=0, value=0)
         state_additional_nurses = st.sidebar.number_input('Additional Nurses (State-wide)', min_value=0, value=0)
 
         # Add a button to trigger the calculation
         if st.sidebar.button('Calculate New Coverage'):
             # Distribute additional workforce proportionally based on population
-            df['Additional Doctors'] = (df['Population'] / df['Population'].sum() * state_additional_doctors).astype(int)
-            df['Additional Nurses'] = (df['Population'] / df['Population'].sum() * state_additional_nurses).astype(int)
+            df['Additional Doctors'] = np.round((df['Population'] / df['Population'].sum() * state_additional_doctors),0).astype(int)
+            df['Additional Nurses'] = np.round((df['Population'] / df['Population'].sum() * state_additional_nurses),0).astype(int)
             
             # Calculate new coverage with proposed additions
             df['New Doctors'] = df['Doctors'] + df['Additional Doctors']
             df['New Nurses'] = df['Nurses'] + df['Additional Nurses']
-            df['New Coverage'] = df.apply(lambda row: calculate_coverage(row['New Doctors'], row['New Nurses'], row['Population']), axis=1)
 
+            for row in df.index:
+                 df.at[row,'New Coverage'] = calculate_coverage(df.at[row,'New Doctors'], df.at[row,'New Nurses'], df.at[row,'Population'])
+            
+            # df['New Coverage'] = df.apply(lambda row: calculate_coverage(row['New Doctors'], row['New Nurses'], row['Population']), axis=1)
 
             # State-wide calculations
             total_population = df['Population'].sum()
@@ -150,12 +156,12 @@ elif choose == "Health":
                 return f'color: {color}'
 
             # Display results
-            st.write('#### State-Wide Coverage with Proposed Additions')
+            st.write('#### State Health Workers Coverage with Proposed Additions')
             state_data = {
                 'Total Population': [total_population],
                 'Total Doctors': [total_doctors],
                 'Total Nurses': [total_nurses],
-                'State-wide Coverage': [state_coverage],
+                'State-Wide Coverage': [state_coverage],
                 'Status': [state_status]
             }
             state_df = pd.DataFrame(state_data)
@@ -171,7 +177,9 @@ elif choose == "Health":
                 st.success(f"The new coverage of {state_coverage:.2f}% meets the WHO standard of {WHO_STANDARD}%.")
 
             # Display health workforce data by LGA with proposed additions
-            df['Status'] = df['New Coverage'].apply(lambda x: 'Meets WHO Standard' if x >= WHO_STANDARD else 'Below WHO Standard')
+            for row in df.index:
+                 df.at[row,'Status'] = 'Meets WHO Standard' if df.at[row,'New Coverage'] >= WHO_STANDARD else 'Below WHO Standard'
+                #  df['Status'] = df['New Coverage'].apply(lambda x: 'Meets WHO Standard' if x >= WHO_STANDARD else 'Below WHO Standard')
 
 
             st.write('#### Health Workforce Data by LGA with Additions')
@@ -182,9 +190,6 @@ elif choose == "Health":
 
             # Bar chart for doctors and nurses
             st.bar_chart(df.set_index('LGA')[['New Doctors', 'New Nurses']])
-
-            # Line chart for coverage
-            st.line_chart(df.set_index('LGA')['New Coverage'])
 
         else:
             total_population = df['Population'].sum()
@@ -209,7 +214,7 @@ elif choose == "Health":
                 return f'color: {color}'
 
             # Display initial health workforce state-wide
-            st.write('#### State Wide Workforce')
+            st.write('#### State Health Workforce')
             st.dataframe(state_df.set_index('Total Population').style.applymap(color_status, subset=['Status']))
 
             # Display initial health workforce data by LGA
@@ -383,7 +388,7 @@ elif choose == "Health":
 
         # Display original and adjusted data
         st.write(f"#### Selected LGA: {selected_lga}")
-        st.dataframe(lga_data.set_index("LGA"))
+        st.write(lga_data.to_html(index=False), unsafe_allow_html=True)
 
         # Calculate adjusted values based on slider input
         adjusted_enrollment_rate = lga_data['enrollment_rate'] * (1 + adjustment / 100)
@@ -403,63 +408,105 @@ elif choose == "Health":
         st.dataframe(predicted_df.T)
 
 elif choose == "Education":
+
     # Load the data
     ta_df = pd.read_excel("teachers_allocation.xlsx")
 
-    # Group by 'LGA' and calculate the sum of 'total_students' and 'total_teachers' for each 'LGA'
-    lga_ta = ta_df.groupby('LGA').agg({'total_students': 'sum', 'total_teachers': 'sum'}).reset_index()
+    # Group by 'LGA' and calculate the sum of 'Total Students' and 'Total Teachers' for each 'LGA'
+    lga_ta = ta_df.groupby('LGA').agg({'Total Students': 'sum', 'Total Teachers': 'sum'}).reset_index()
 
     # Calculate the ideal number of students per teacher
     ideal_students_per_teacher = 15
 
     # Calculate the actual number of students per teacher in each LGA
-    lga_ta['actual_students_per_teacher'] = round(lga_ta['total_students'] / lga_ta['total_teachers'], 0)
+    lga_ta['Actual Students Per Teacher'] = round(lga_ta['Total Students'] / lga_ta['Total Teachers'], 2)
 
     # Calculate the percentage coverage in each LGA
-    lga_ta['percentage_coverage'] = round((ideal_students_per_teacher / lga_ta['actual_students_per_teacher']) * 100, 2)
+    lga_ta['Percentage Coverage'] = round((ideal_students_per_teacher / lga_ta['Actual Students Per Teacher']) * 100, 2)
+
+    lga_ta = lga_ta.sort_values(by='Percentage Coverage', ascending=True)
 
     # Function to calculate percentage coverage
-    def calculate_coverage(df, lga, additional_teachers, additional_students):
-        ideal_students_per_teacher = 15
+    def calculate_coverage(df, lga, additional_teachers, additional_students, ideal_students_per_teacher):
         lga_row = df[df['LGA'] == lga]
-        new_total_teachers = lga_row['total_teachers'].values[0] + additional_teachers
-        new_total_students = lga_row['total_students'].values[0] + additional_students
+        new_total_teachers = lga_row['Total Teachers'].values[0] + additional_teachers
+        new_total_students = lga_row['Total Students'].values[0] + additional_students
         new_actual_students_per_teacher = new_total_students / new_total_teachers
         new_percentage_coverage = round((ideal_students_per_teacher / new_actual_students_per_teacher) * 100, 2)
-        return new_percentage_coverage
+        return new_total_students, new_total_teachers, new_percentage_coverage
+
+    # Function to calculate the required additional teachers and students to achieve a desired percentage coverage
+    def calculate_coverage_to_reach(df, lga, target_coverage, ideal_students_per_teacher):
+        lga_row = df[df['LGA'] == lga]
+        total_teachers = lga_row['Total Teachers'].values[0]
+        total_students = lga_row['Total Students'].values[0]
+        
+        # Calculate the required actual students per teacher to achieve the target coverage
+        required_actual_students_per_teacher = ideal_students_per_teacher / (target_coverage / 100)
+        
+        # Calculate the required total number of teachers to achieve the target coverage
+        required_total_teachers = total_students / required_actual_students_per_teacher
+        
+        # Calculate the additional teachers needed
+        additional_teachers = required_total_teachers - total_teachers
+        
+        return total_students, required_total_teachers, additional_teachers, required_actual_students_per_teacher
 
     # Streamlit interface
-    st.subheader("Teachers Allocation Scenario Analysis")
-    st.write("""
-             Welcome to the Teachers Allocation Scenario Analysis application!") 
-             This tool is designed to help education administrators and policymakers analyze and optimize the allocation of
-             senior secondary schoo (SSS) teachers across the 18 Local Government Areas (LGAs) in Edo State.""")
+    st.title("Teachers Allocation Scenario Analysis")
+    st.write("Welcome to the Teachers Allocation Scenario Analysis application!") 
+    st.write("This tool is designed to help education administrators and policymakers analyze and optimize the allocation of senior secondary school (SSS) teachers across the 18 Local Government Areas (LGAs) in Edo State.")
 
-    # User inputs
+    # Sidebar user inputs
+    st.sidebar.header("Input Parameters")
     lga = st.sidebar.selectbox("Select LGA", lga_ta['LGA'])
+    ideal_students_per_teacher = st.sidebar.number_input("Enter number of ideal students per teacher", min_value=15, step=5)
     additional_teachers = st.sidebar.number_input("Enter number of additional teachers", min_value=0, step=1)
     additional_students = st.sidebar.number_input("Enter number of additional students", min_value=0, step=1)
-    
-    # Display data
-    st.subheader("LGA Data")
-    st.write(lga_ta)
 
 
-    # Calculate coverage
+    # Calculate coverage and display results in a new table
     if st.sidebar.button("Calculate Coverage"):
-        percentage_coverage = calculate_coverage(lga_ta, lga, additional_teachers, additional_students)
-        st.write(f"##### The new percentage coverage for {lga} is {percentage_coverage}%")
+        new_total_students, new_total_teachers, new_percentage_coverage = calculate_coverage(
+            lga_ta, lga, additional_teachers, additional_students, ideal_students_per_teacher
+        )
+        new_data = {
+            "LGA": [lga],
+            "Additional Teachers": [additional_teachers],
+            "Additional Students": [additional_students],
+            "New Total Students": [new_total_students],
+            "New Total Teachers": [new_total_teachers],
+            "New Percentage Coverage": [new_percentage_coverage]
+        }
+        new_df = pd.DataFrame(new_data)
+        st.subheader("New Coverage Data")
+        st.write(new_df.to_html(index=False), unsafe_allow_html=True)
+        st.write(f"The new percentage coverage for {lga} is {new_percentage_coverage}%")
 
-    st.divider()
+    st.sidebar.subheader("Optimal Coverage")
+    target_coverage = st.sidebar.slider("Select Target Coverage", 0, 100, 0)
 
-    # Visualize the students and teachers distribution
-    st.subheader("Data Visualization")
+    # Calculate coverage and display results in a new table
+    if target_coverage > 0:
+        total_students, required_total_teachers, additional_teachers, required_actual_students_per_teacher = calculate_coverage_to_reach(
+            lga_ta, lga, target_coverage, ideal_students_per_teacher
+        )
+        new_data = {
+            "LGA": [lga],
+            "Total Students": [total_students],
+            "Current Total Teachers": [lga_ta[lga_ta['LGA'] == lga]['Total Teachers'].values[0]],
+            "Required Total Teachers": [round(required_total_teachers, 2)],
+            "Additional Teachers Needed": [round(additional_teachers, 2)],
+            "Target Percentage Coverage": [target_coverage]
+        }
+        new_df = pd.DataFrame(new_data)
+        st.subheader("New Coverage Data")
+        st.write(new_df.to_html(index=False), unsafe_allow_html=True)
+        st.write(f"The new percentage coverage target for {lga} is {target_coverage}%")
 
-    st.write("#### SSS Students' Distribution Accross the 18 LGAs")
-    st.bar_chart(lga_ta.set_index('LGA')['total_students'])
-
-    st.write("#### SSS Teachers' Distribution Accross the 18 LGAs")
-    st.bar_chart(lga_ta.set_index('LGA')['total_teachers'])
+    # Display original data
+    st.subheader("Current Coverage Data")
+    st.write(lga_ta.to_html(index=False), unsafe_allow_html=True)
 
 elif choose == "Agriculture":
 
