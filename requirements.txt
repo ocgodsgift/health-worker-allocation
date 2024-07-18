@@ -17,4 +17,3 @@ autopep8
 email_validator
 scikit-learn
 openpyxl
-time
