@@ -75,7 +75,7 @@ elif choose == "Health":
 
     option = st.selectbox(
         "",
-        ("Health Worker Allocation", "Health Insurance", "OutPatient Scenario"),
+        ("Health Worker Allocation", "Health Insurance", "Outpatient Scenario"),
         index=0,
     )
 
@@ -304,7 +304,7 @@ elif choose == "Health":
             """
         )
 
-    elif option == "OutPatient Scenario":
+    elif option == "Outpatient Scenario":
 
         # Load the data
         df = pd.read_csv("outpatient.csv")
@@ -465,7 +465,7 @@ elif choose == "Health":
             X = df[["enrollment_rate"]]
             y_death = df["death_rate"]
             y_inpatient = df["In-patient"]
-            y_outpatient = df["OutPatient"]
+            y_outpatient = df["Outpatient"]
 
             # Initialize Linear Regression models
             model_death = LinearRegression()
