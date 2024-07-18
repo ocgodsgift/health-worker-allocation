@@ -11,6 +11,7 @@ from sklearn.linear_model import LinearRegression
 from datetime import datetime as t
 from datetime import time
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
@@ -41,13 +42,13 @@ with st.sidebar:
         menu_icon="list",
         default_index=0,
         styles={
-            "container": {"padding": "5!important", "background-color": "white"},
+            "container": {"padding": "5!important", "background-color": "green"},
             "icon": {"color": "green", "font-size": "20px"},
             "nav-link": {
                 "font-size": "12px",
                 "text-align": "left",
                 "margin": "0px",
-                "--hover-color": "grey",
+                "--hover-color": "black",
             },
             "nav-link-selected": {"background-color": "black"},
         },
@@ -121,8 +122,7 @@ elif choose == "Health":
 
         for row in df.index:
             df.at[row, "Coverage"] = calculate_coverage(
-                df.at[row, "Doctors"], df.at[row,
-                                             "Nurses"], df.at[row, "Population"]
+                df.at[row, "Doctors"], df.at[row, "Nurses"], df.at[row, "Population"]
             )
 
         # Streamlit UI
@@ -139,13 +139,11 @@ elif choose == "Health":
         if st.sidebar.button("Calculate New Coverage"):
             # Distribute additional workforce proportionally based on population
             df["Additional Doctors"] = np.round(
-                (df["Population"] / df["Population"].sum()
-                 * state_additional_doctors),
+                (df["Population"] / df["Population"].sum() * state_additional_doctors),
                 0,
             ).astype(int)
             df["Additional Nurses"] = np.round(
-                (df["Population"] / df["Population"].sum()
-                 * state_additional_nurses), 0
+                (df["Population"] / df["Population"].sum() * state_additional_nurses), 0
             ).astype(int)
 
             # Calculate new coverage with proposed additions
@@ -334,21 +332,18 @@ elif choose == "Health":
         df_scenario["PHC"] = df["PHC"] * (1 + phc_increase / 100)
 
         # Predict outpatient attendance for the scenario
-        predictions_scenario = model.predict(
-            df_scenario[["PHC", "Population 2022"]])
+        predictions_scenario = model.predict(df_scenario[["PHC", "Population 2022"]])
 
         for row in df["Outpatient Attendance"].index:
             if df.at[row, "Outpatient Attendance"] - predictions_scenario[row] < 0:
                 df.at[row, "New Outpatient Attendance"] = 0
             else:
                 df.at[row, "New Outpatient Attendance"] = (
-                    df.at[row, "Outpatient Attendance"] -
-                    predictions_scenario[row]
+                    df.at[row, "Outpatient Attendance"] - predictions_scenario[row]
                 )
 
         df_scenario["New PHC"] = np.round(df_scenario["PHC"])
-        df["New Outpatient Attendance"] = np.round(
-            df["New Outpatient Attendance"])
+        df["New Outpatient Attendance"] = np.round(df["New Outpatient Attendance"])
 
         # Compile the results into a dataframe
         scenario_results = pd.DataFrame(
@@ -441,8 +436,7 @@ elif choose == "Health":
         # Visualization
         st.write("#### Scenario Over All Local Government Area")
         st.bar_chart(
-            scenario_results.set_index(
-                "LGA")["Estimated Outpatient Attendance"]
+            scenario_results.set_index("LGA")["Estimated Outpatient Attendance"]
         )
 
     elif option == "Health Insurance":
@@ -457,8 +451,7 @@ elif choose == "Health":
         selected_lga = st.sidebar.selectbox("Select LGA", df["LGA"])
 
         # Slider for enrollment rate adjustment
-        adjustment = st.sidebar.slider(
-            "Enrollment Rate Adjustment (%)", 0, 100, 5, 5)
+        adjustment = st.sidebar.slider("Enrollment Rate Adjustment (%)", 0, 100, 5, 5)
 
         # Predict function
         def predict_metrics(enrollment_rate_increase):
@@ -478,10 +471,8 @@ elif choose == "Health":
             model_outpatient.fit(X, y_outpatient)
 
             # Predictions for the specified enrollment rate increase
-            predicted_death_rate = model_death.predict(
-                [[enrollment_rate_increase]])
-            predicted_inpatient = model_inpatient.predict(
-                [[enrollment_rate_increase]])
+            predicted_death_rate = model_death.predict([[enrollment_rate_increase]])
+            predicted_inpatient = model_inpatient.predict([[enrollment_rate_increase]])
             predicted_outpatient = model_outpatient.predict(
                 [[enrollment_rate_increase]]
             )
@@ -511,8 +502,7 @@ elif choose == "Health":
         st.write(lga_data.to_html(index=False), unsafe_allow_html=True)
 
         # Calculate adjusted values based on slider input
-        adjusted_enrollment_rate = lga_data["enrollment_rate"] * \
-            (1 + adjustment / 100)
+        adjusted_enrollment_rate = lga_data["enrollment_rate"] * (1 + adjustment / 100)
         lga_data["adjusted_enrollment_rate"] = adjusted_enrollment_rate
 
         # Prediction and display based on slider input
@@ -536,186 +526,365 @@ elif choose == "Health":
 
 elif choose == "Education":
 
+    # Streamlit interface
+    st.title("Teachers Allocation Scenario Analysis")
+    st.write("Welcome to the Teachers Allocation Scenario Analysis application!")
+    st.write(
+        "This tool is designed to help education administrators and policymakers analyze and optimize the allocation of senior secondary school (SSS) teachers across the 18 Local Government Areas (LGAs) in Edo State."
+    )
+
     # Load the data
     ta_df = pd.read_excel("teachers_allocation.xlsx")
 
-    # Group by 'LGA' and calculate the sum of 'Total Students' and 'Total Teachers' for each 'LGA'
-    lga_ta = ta_df.groupby('LGA').agg({'Total Students': 'sum', 'Total Teachers': 'sum'}).reset_index()
+    option = st.selectbox(
+        "",
+        ("Input Parameters", "Optimal Coverage"),
+        index=0,
+    )
 
-    lga_ta['Total Teachers'] = lga_ta['Total Teachers'].astype(int)
+    # Group by 'LGA' and calculate the sum of 'Total Students' and 'Total Teachers' for each 'LGA'
+    lga_ta = (
+        ta_df.groupby("LGA")
+        .agg({"Total Students": "sum", "Total Teachers": "sum"})
+        .reset_index()
+    )
+
+    lga = st.selectbox("Select LGA", lga_ta["LGA"])
+
+    # Function to calculate percentage coverage
+    def calculate_coverage(
+        df, lga, additional_teachers, additional_students, ideal_students_per_teacher
+    ):
+        lga_row = df[df["LGA"] == lga]
+        new_total_teachers = int(
+            lga_row["Total Teachers"].values[0] + additional_teachers
+        )
+        new_total_students = lga_row["Total Students"].values[0] + additional_students
+        new_actual_students_per_teacher = round(
+            new_total_students / new_total_teachers, 0
+        )
+        new_percentage_coverage = round(
+            (ideal_students_per_teacher / new_actual_students_per_teacher) * 100, 2
+        )
+        return new_total_students, new_total_teachers, new_percentage_coverage
+
+    # Function to calculate the required additional teachers and students to achieve a desired percentage coverage
+    def calculate_coverage_to_reach(
+        df, lga, target_coverage, ideal_students_per_teacher
+    ):
+        lga_row = df[df["LGA"] == lga]
+        total_teachers = lga_row["Total Teachers"].values[0]
+        total_students = lga_row["Total Students"].values[0]
+
+        # Calculate the required actual students per teacher to achieve the target coverage
+        required_actual_students_per_teacher = int(
+            round(ideal_students_per_teacher / (target_coverage / 100), 0)
+        )
+
+        # Calculate the required total number of teachers to achieve the target coverage
+        required_total_teachers = int(
+            round(total_students / required_actual_students_per_teacher, 0)
+        )
+
+        # Calculate the additional teachers needed
+        additional_teachers = int(round(required_total_teachers - total_teachers, 0))
+
+        return (
+            total_students,
+            required_total_teachers,
+            additional_teachers,
+            required_actual_students_per_teacher,
+        )
+
+    global ideal_students_per_teacher
+    global additional_teachers
+    global additional_students
 
     # Calculate the ideal number of students per teacher
     ideal_students_per_teacher = 15
 
-    # Calculate the actual number of students per teacher in each LGA
-    lga_ta['Actual Students Per Teacher'] = round(lga_ta['Total Students'] / lga_ta['Total Teachers'], 0).astype(int)
+    if option == "Input Parameters":
 
-    # Calculate the percentage coverage in each LGA
-    lga_ta['Percentage Coverage'] = round((ideal_students_per_teacher / lga_ta['Actual Students Per Teacher']) * 100, 2)
-
-    lga_ta = lga_ta.sort_values(by='Percentage Coverage', ascending=True)
-
-    # Function to calculate percentage coverage
-    def calculate_coverage(df, lga, additional_teachers, additional_students, ideal_students_per_teacher):
-        lga_row = df[df['LGA'] == lga]
-        new_total_teachers = int(lga_row['Total Teachers'].values[0] + additional_teachers)
-        new_total_students = lga_row['Total Students'].values[0] + additional_students
-        new_actual_students_per_teacher = round(new_total_students / new_total_teachers, 0)
-        new_percentage_coverage = round((ideal_students_per_teacher / new_actual_students_per_teacher) * 100, 2)
-        return new_total_students, new_total_teachers, new_percentage_coverage
-
-    # Function to calculate the required additional teachers and students to achieve a desired percentage coverage
-    def calculate_coverage_to_reach(df, lga, target_coverage, ideal_students_per_teacher):
-        lga_row = df[df['LGA'] == lga]
-        total_teachers = lga_row['Total Teachers'].values[0]
-        total_students = lga_row['Total Students'].values[0]
-        
-        # Calculate the required actual students per teacher to achieve the target coverage
-        required_actual_students_per_teacher = int(round(ideal_students_per_teacher / (target_coverage / 100),0))
-        
-        # Calculate the required total number of teachers to achieve the target coverage
-        required_total_teachers = int(round(total_students / required_actual_students_per_teacher,0))
-        
-        # Calculate the additional teachers needed
-        additional_teachers = int(round(required_total_teachers - total_teachers, 0))
-        
-        return total_students, required_total_teachers, additional_teachers, required_actual_students_per_teacher
-
-    # Streamlit interface
-    st.title("Teachers Allocation Scenario Analysis")
-    st.write("Welcome to the Teachers Allocation Scenario Analysis application!") 
-    st.write("This tool is designed to help education administrators and policymakers analyze and optimize the allocation of senior secondary school (SSS) teachers across the 18 Local Government Areas (LGAs) in Edo State.")
-
-    # Sidebar user inputs
-    st.sidebar.header("Input Parameters")
-    lga = st.sidebar.selectbox("Select LGA", lga_ta['LGA'])
-    ideal_students_per_teacher = st.sidebar.number_input("Enter number of ideal students per teacher", min_value=15, step=5)
-    additional_teachers = st.sidebar.number_input("Enter number of additional teachers", min_value=0, step=1)
-    additional_students = st.sidebar.number_input("Enter number of additional students", min_value=0, step=1)
-
-
-    # Calculate coverage and display results in a new table
-    if st.sidebar.button("Calculate Coverage"):
-        new_total_students, new_total_teachers, new_percentage_coverage = calculate_coverage(
-            lga_ta, lga, additional_teachers, additional_students, ideal_students_per_teacher
+        ideal_students_per_teacher = st.number_input(
+            "Enter number of ideal students per teacher", min_value=15, step=5
         )
-        new_data = {
-            "LGA": [lga],
-            "Additional Teachers": [additional_teachers],
-            "Additional Students": [additional_students],
-            "New Total Students": [new_total_students],
-            "New Total Teachers": [new_total_teachers],
-            "New Percentage Coverage": [new_percentage_coverage]
-        }
-        new_df = pd.DataFrame(new_data)
-        st.subheader("New Coverage Data")
-        st.write(new_df.to_html(index=False), unsafe_allow_html=True)
-        st.write(f"The new percentage coverage for {lga} is {new_percentage_coverage}%")
-
-    st.sidebar.subheader("Optimal Coverage")
-    target_coverage = st.sidebar.slider("Select Target Coverage", 0, 100, 0)
-
-    # Calculate coverage and display results in a new table
-    if target_coverage > 0:
-        total_students, required_total_teachers, additional_teachers, required_actual_students_per_teacher = calculate_coverage_to_reach(
-            lga_ta, lga, target_coverage, ideal_students_per_teacher
+        additional_teachers = st.number_input(
+            "Enter number of additional teachers", min_value=0, step=1
         )
-        new_data = {
-            "LGA": [lga],
-            "Total Students": [total_students],
-            "Current Total Teachers": [lga_ta[lga_ta['LGA'] == lga]['Total Teachers'].values[0]],
-            "Required Total Teachers": [round(required_total_teachers, 2)],
-            "Additional Teachers Needed": [round(additional_teachers, 2)],
-            "Target Percentage Coverage": [target_coverage]
-        }
-        new_df = pd.DataFrame(new_data)
-        st.subheader("New Coverage Data")
-        st.write(new_df.to_html(index=False), unsafe_allow_html=True)
-        st.write(f"The new percentage coverage target for {lga} is {target_coverage}%")
+        additional_students = st.number_input(
+            "Enter number of additional students", min_value=0, step=1
+        )
 
-    # Display original data
-    st.subheader("Current Coverage Data")
-    st.write(lga_ta.to_html(index=False), unsafe_allow_html=True)
+        lga_ta["Total Teachers"] = lga_ta["Total Teachers"].astype(int)
+
+        # Calculate the actual number of students per teacher in each LGA
+        lga_ta["Actual Students Per Teacher"] = round(
+            lga_ta["Total Students"] / lga_ta["Total Teachers"], 0
+        ).astype(int)
+
+        # Calculate the percentage coverage in each LGA
+        lga_ta["Percentage Coverage"] = round(
+            (ideal_students_per_teacher / lga_ta["Actual Students Per Teacher"]) * 100,
+            2,
+        )
+
+        lga_ta = lga_ta.sort_values(by="Percentage Coverage", ascending=True)
+
+        # Calculate coverage and display results in a new table
+        if st.button("Calculate Coverage"):
+            new_total_students, new_total_teachers, new_percentage_coverage = (
+                calculate_coverage(
+                    lga_ta,
+                    lga,
+                    additional_teachers,
+                    additional_students,
+                    ideal_students_per_teacher,
+                )
+            )
+            new_data = {
+                "LGA": [lga],
+                "Additional Teachers": [additional_teachers],
+                "Additional Students": [additional_students],
+                # "Current Coverage": [lga][
+                #    round(
+                #        (
+                #            ideal_students_per_teacher
+                #            / lga_ta["Actual Students Per Teacher"]
+                #        )
+                #        * 100,
+                #        2,
+                #    )
+                # ],
+                "New Total Students": [new_total_students],
+                "New Total Teachers": [new_total_teachers],
+                "New Percentage Coverage": [new_percentage_coverage],
+            }
+            new_df = pd.DataFrame(new_data)
+            st.subheader("New Coverage Data")
+            st.write(new_df.to_html(index=False), unsafe_allow_html=True)
+            st.write(
+                f"The new percentage coverage for {lga} is {new_percentage_coverage}%"
+            )
+
+        # Display original data
+        st.subheader("Current Coverage Data")
+        st.write(lga_ta.to_html(index=False), unsafe_allow_html=True)
+
+    elif option == "Optimal Coverage":
+        target_coverage = st.slider("Select Target Coverage", 0, 100, 0)
+
+        # Calculate coverage and display results in a new table
+        if target_coverage > 0:
+            (
+                total_students,
+                required_total_teachers,
+                additional_teachers,
+                required_actual_students_per_teacher,
+            ) = calculate_coverage_to_reach(
+                lga_ta, lga, target_coverage, ideal_students_per_teacher
+            )
+            new_data = {
+                "LGA": [lga],
+                "Total Students": [total_students],
+                "Current Total Teachers": [
+                    lga_ta[lga_ta["LGA"] == lga]["Total Teachers"].values[0]
+                ],
+                "Required Total Teachers": [round(required_total_teachers, 2)],
+                "Additional Teachers Needed": [round(additional_teachers, 2)],
+                "Target Percentage Coverage": [target_coverage],
+            }
+            new_df = pd.DataFrame(new_data)
+            st.subheader("New Coverage Data")
+            st.write(new_df.to_html(index=False), unsafe_allow_html=True)
+            st.write(
+                f"The new percentage coverage target for {lga} is {target_coverage}%"
+            )
 
 
 elif choose == "Agriculture":
 
     # grouping the age
     def age_group(df, age):
-        bins = [0,30,50,120]
-        labels = ['Young','Adult','Aged']
-        df['Age group'] = pd.cut(df[age], bins = bins, labels = labels)
+        bins = [0, 30, 50, 120]
+        labels = ["Young", "Adult", "Aged"]
+        df["Age group"] = pd.cut(df[age], bins=bins, labels=labels)
         return df
 
-
     def mappings(map_df):
-        ed = {'Primary School':1,'Secondary School':2,'Other':2,'Tertiary':3,'Post Graduate':4,'Primary school':1,'Teachers Training':3,'Uneducated':1,'Technical college':2,'Informal education':1,'Pre-primary':1}
-        bank = {'No':0,'Yes':1}
-        ID = {'yes':1,'No':0}
-        land = {'Rental':1,'Others':1,'Owner':2}
-        sfarm = {'Large (6 Acre and above)':3,'Medium (1-6 Acre)':2,'Small (Less than 1 Acre)':1}
-        mainc = {'Agriculture':1,'Others':0}
-        #agr = {'Crop':1,'Crop and Livestock':1,'Aquaculture':1,'Livestock':1,'Crop and Aquaculture':1,'Crop, Aquaculture and Livestock':1}
-        coop = {'No':0,'Yes':1}
-        noag = {"'4-7'":2,"'1-3'":1,"'8-11'":3}
-        agem = {'Young':1,'Adult':3,'Aged':2}
-        incom = {'0-100k':1,'100k-1m':2,'1m-10m':3,'10m-100m':4,'100m-500m':4,'500m and above':4}
-        loan = {'Yes':1, 'No':0}
-        food ={'Yes':1,'No':0}
-        cash = {'Yes':1,'No':0}
-        Aqu = {'Yes':1,'No':0}
-        Ls = {'Yes':1,'No':0}
-        
-        var = ['Educational Level','Do you have a bank account?','Identification','Type of Land Tenure',
-        'Size of Farm','Major Source of Income(Agriculture)',
-        'Are you in a cooperative?',"No. of Agricultural Activity Group","Age group","Income range",'loan',
-        'Food','Cash','Aquatic','Livestock']
+        ed = {
+            "Primary School": 1,
+            "Secondary School": 2,
+            "Other": 2,
+            "Tertiary": 3,
+            "Post Graduate": 4,
+            "Primary school": 1,
+            "Teachers Training": 3,
+            "Uneducated": 1,
+            "Technical college": 2,
+            "Informal education": 1,
+            "Pre-primary": 1,
+        }
+        bank = {"No": 0, "Yes": 1}
+        ID = {"yes": 1, "No": 0}
+        land = {"Rental": 1, "Others": 1, "Owner": 2}
+        sfarm = {
+            "Large (6 Acre and above)": 3,
+            "Medium (1-6 Acre)": 2,
+            "Small (Less than 1 Acre)": 1,
+        }
+        mainc = {"Agriculture": 1, "Others": 0}
+        # agr = {'Crop':1,'Crop and Livestock':1,'Aquaculture':1,'Livestock':1,'Crop and Aquaculture':1,'Crop, Aquaculture and Livestock':1}
+        coop = {"No": 0, "Yes": 1}
+        noag = {"'4-7'": 2, "'1-3'": 1, "'8-11'": 3}
+        agem = {"Young": 1, "Adult": 3, "Aged": 2}
+        incom = {
+            "0-100k": 1,
+            "100k-1m": 2,
+            "1m-10m": 3,
+            "10m-100m": 4,
+            "100m-500m": 4,
+            "500m and above": 4,
+        }
+        loan = {"Yes": 1, "No": 0}
+        food = {"Yes": 1, "No": 0}
+        cash = {"Yes": 1, "No": 0}
+        Aqu = {"Yes": 1, "No": 0}
+        Ls = {"Yes": 1, "No": 0}
 
-        map_ = [ed,bank,ID,land,sfarm,mainc,coop,noag,agem,incom,loan,food,cash,Aqu,Ls]
-        for i,j in zip(var,map_):
-            map_df.loc[:,i] = map_df[i].map(j).fillna(0)
+        var = [
+            "Educational Level",
+            "Do you have a bank account?",
+            "Identification",
+            "Type of Land Tenure",
+            "Size of Farm",
+            "Major Source of Income(Agriculture)",
+            "Are you in a cooperative?",
+            "No. of Agricultural Activity Group",
+            "Age group",
+            "Income range",
+            "loan",
+            "Food",
+            "Cash",
+            "Aquatic",
+            "Livestock",
+        ]
+
+        map_ = [
+            ed,
+            bank,
+            ID,
+            land,
+            sfarm,
+            mainc,
+            coop,
+            noag,
+            agem,
+            incom,
+            loan,
+            food,
+            cash,
+            Aqu,
+            Ls,
+        ]
+        for i, j in zip(var, map_):
+            map_df.loc[:, i] = map_df[i].map(j).fillna(0)
         return map_df
-
 
     # adding weights to the variables
     def weights(df):
-        #Financial, Bank and Loan info
-        df[["Income range","Do you have a bank account?","Identification","loan"]] = df[["Income range","Do you have a bank account?","Identification","loan"]] * 4
+        # Financial, Bank and Loan info
+        df[
+            ["Income range", "Do you have a bank account?", "Identification", "loan"]
+        ] = (
+            df[
+                [
+                    "Income range",
+                    "Do you have a bank account?",
+                    "Identification",
+                    "loan",
+                ]
+            ]
+            * 4
+        )
 
-        #Farm land Information
-        df[["Type of Land Tenure","Size of Farm"]] = df[["Type of Land Tenure","Size of Farm"]] * 2
+        # Farm land Information
+        df[["Type of Land Tenure", "Size of Farm"]] = (
+            df[["Type of Land Tenure", "Size of Farm"]] * 2
+        )
 
-        #Agricultural Activity
-        df[["Major Source of Income(Agriculture)",'Are you in a cooperative?',"Food",
-                "Cash","Aquatic","Livestock"]] = df[["Major Source of Income(Agriculture)",'Are you in a cooperative?',
-                                                        "Food","Cash","Aquatic","Livestock"]] * 3
+        # Agricultural Activity
+        df[
+            [
+                "Major Source of Income(Agriculture)",
+                "Are you in a cooperative?",
+                "Food",
+                "Cash",
+                "Aquatic",
+                "Livestock",
+            ]
+        ] = (
+            df[
+                [
+                    "Major Source of Income(Agriculture)",
+                    "Are you in a cooperative?",
+                    "Food",
+                    "Cash",
+                    "Aquatic",
+                    "Livestock",
+                ]
+            ]
+            * 3
+        )
         return df
 
+    var = [
+        "Educational Level",
+        "Do you have a bank account?",
+        "Identification",
+        "Type of Land Tenure",
+        "Size of Farm",
+        "Major Source of Income(Agriculture)",
+        "Are you in a cooperative?",
+        "No. of Agricultural Activity Group",
+        "Age group",
+        "Income range",
+        "loan",
+        "Food",
+        "Cash",
+        "Aquatic",
+        "Livestock",
+    ]
 
+    edu_level = [
+        "Pre-primary",
+        "Primary School",
+        "Secondary School",
+        "Teachers Training",
+        "Tertiary",
+        "Post Graduate",
+        "Technical college",
+        "Informal education",
+    ]
+    bank_acc = ["No", "Yes"]
+    ID = ["Yes", "No"]
+    land_ten = ["Rental", "Others", "Owner"]
+    farm_size = [
+        "Large (6 Acre and above)",
+        "Medium (1-6 Acre)",
+        "Small (Less than 1 Acre)",
+    ]
+    agric_incom_source = ["Agriculture", "Others"]
+    # agric_activity = ['Crop', 'Crop and Livestock', 'Aquaculture', 'Livestock','Crop and Aquaculture', 'Crop, Aquaculture and Livestock','Crop ']
+    cooperative = ["No", "Yes"]
+    No_agric_activity = ["'1-3'", "'4-7'", "'8-11'"]
+    Incom = ["0-100k", "100k-1m", "1m-10m", "10m-100m", "100m-500m", "500m and above"]
+    loan = ["Yes", "No"]
+    Food = ["Yes", "No"]
+    Cash = ["Yes", "No"]
+    Aquatic = ["Yes", "No"]
+    Livestock = ["Yes", "No"]
 
-    var = ['Educational Level','Do you have a bank account?','Identification','Type of Land Tenure',
-        'Size of Farm','Major Source of Income(Agriculture)',
-        'Are you in a cooperative?',"No. of Agricultural Activity Group","Age group","Income range",'loan',
-        'Food','Cash','Aquatic','Livestock']
-
-
-    edu_level = ['Pre-primary','Primary School','Secondary School','Teachers Training','Tertiary','Post Graduate','Technical college','Informal education']
-    bank_acc = ['No','Yes']
-    ID = ['Yes','No']
-    land_ten = ['Rental', 'Others', 'Owner']
-    farm_size = ['Large (6 Acre and above)', 'Medium (1-6 Acre)','Small (Less than 1 Acre)']
-    agric_incom_source = ['Agriculture', 'Others']
-    #agric_activity = ['Crop', 'Crop and Livestock', 'Aquaculture', 'Livestock','Crop and Aquaculture', 'Crop, Aquaculture and Livestock','Crop ']
-    cooperative = ['No', 'Yes']
-    No_agric_activity = ["'1-3'","'4-7'","'8-11'"]
-    Incom = ['0-100k','100k-1m','1m-10m', '10m-100m', '100m-500m','500m and above']
-    loan = ['Yes','No']
-    Food = ['Yes','No']
-    Cash = ['Yes','No']
-    Aquatic = ['Yes','No']
-    Livestock = ['Yes','No']
-
-    header = st.container(border=True,height = 400)
+    header = st.container(border=True, height=400)
 
     st.markdown(
         """
@@ -725,13 +894,16 @@ elif choose == "Agriculture":
             overflow: visible;
         }
         </style>
-        """, unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True,
     )
     with header:
         st.title("Farmer Credit Scoring System")
-        st.write("#### The Farmer Credit Scoring System addresses the financial barriers smallholder farmers face due to a lack of traditional credit history by providing an inclusive evaluation method that considers financial, agricultural, property, and personal information. This system aims to facilitate credit access, helping farmers invest in sustainable growth while supporting the Edo State government in resource allocation for poverty alleviation and farm input distribution. By enhancing financial inclusion, the system fosters a supportive financial ecosystem and strengthens the agricultural economy.")
-        
-    col1, col2 = st.columns([2,1])
+        st.write(
+            "#### The Farmer Credit Scoring System addresses the financial barriers smallholder farmers face due to a lack of traditional credit history by providing an inclusive evaluation method that considers financial, agricultural, property, and personal information. This system aims to facilitate credit access, helping farmers invest in sustainable growth while supporting the Edo State government in resource allocation for poverty alleviation and farm input distribution. By enhancing financial inclusion, the system fosters a supportive financial ecosystem and strengthens the agricultural economy."
+        )
+
+    col1, col2 = st.columns([2, 1])
     st.markdown(
         """
         <style>
@@ -742,20 +914,24 @@ elif choose == "Agriculture":
             border-radius: 5px;
         }
         </style>
-        """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
-    #with col1:
-    with st.form(key='my_form'):
+    # with col1:
+    with st.form(key="my_form"):
         st.header("Personal information")
         st.markdown('<div class="section">', unsafe_allow_html=True)
-        ag = st.number_input("How old are you?", value = 0)
+        ag = st.number_input("How old are you?", value=0)
         edu = st.selectbox("Educational Level", edu_level)
-        id_ = st.selectbox("Do you have a mode of Identification (ID card)?", ID) 
+        id_ = st.selectbox("Do you have a mode of Identification (ID card)?", ID)
 
         st.header("Financial Information")
         st.markdown('<div class="section">', unsafe_allow_html=True)
         bank = st.selectbox("Do you have a bank account?", bank_acc)
-        incsource = st.selectbox("What is your major source of income?", agric_incom_source)
+        incsource = st.selectbox(
+            "What is your major source of income?", agric_incom_source
+        )
         income = st.selectbox("What is your annual income range?", Incom)
         lo = st.selectbox("Have you ever gotten a bank loan?", loan)
 
@@ -766,49 +942,82 @@ elif choose == "Agriculture":
 
         st.header("Agricultural Activity")
         st.markdown('<div class="section">', unsafe_allow_html=True)
-        #agactivity = st.selectbox("What kind of Agriculture do you practice?", agric_activity)
-        coop = st.selectbox("Are you a registered member of any Agricultural cooperative?", cooperative)
-        no_agractivity = st.selectbox("How many crop types/livestock types/Aquitic animal type do you farm?", No_agric_activity)
+        # agactivity = st.selectbox("What kind of Agriculture do you practice?", agric_activity)
+        coop = st.selectbox(
+            "Are you a registered member of any Agricultural cooperative?", cooperative
+        )
+        no_agractivity = st.selectbox(
+            "How many crop types/livestock types/Aquitic animal type do you farm?",
+            No_agric_activity,
+        )
         foo = st.selectbox("Do you farm food crops", Food)
         cas = st.selectbox("Do you farm cash crops", Cash)
         aqu = st.selectbox("Do you do aquatic farming", Aquatic)
         livest = st.selectbox("Do you do livestock farming", Livestock)
 
-        submit_button = st.form_submit_button(label='Submit')
-
+        submit_button = st.form_submit_button(label="Submit")
 
     if submit_button:
 
         # Creating a new form
-        form = {'Educational Level':[edu],'Do you have a bank account?':[bank],'Identification':[id_],
-                'Type of Land Tenure':[ten],'Size of Farm':[farmsize],
-                'Major Source of Income(Agriculture)':[incsource],
-                "Are you in a cooperative?":[coop],
-                "No. of Agricultural Activity Group":[no_agractivity],"Age group":[ag],"Income range":[income],
-                'loan':[lo],'Food':[foo],'Cash':[cas],'Aquatic':[aqu],'Livestock':[livest]}
+        form = {
+            "Educational Level": [edu],
+            "Do you have a bank account?": [bank],
+            "Identification": [id_],
+            "Type of Land Tenure": [ten],
+            "Size of Farm": [farmsize],
+            "Major Source of Income(Agriculture)": [incsource],
+            "Are you in a cooperative?": [coop],
+            "No. of Agricultural Activity Group": [no_agractivity],
+            "Age group": [ag],
+            "Income range": [income],
+            "loan": [lo],
+            "Food": [foo],
+            "Cash": [cas],
+            "Aquatic": [aqu],
+            "Livestock": [livest],
+        }
 
         # Applying the processing functions on the new form
         form = pd.DataFrame(form)
-        form = age_group(form,'Age group')
-        form['Age group'] = form['Age group'].astype('str')
+        form = age_group(form, "Age group")
+        form["Age group"] = form["Age group"].astype("str")
         form = mappings(form)
         form = weights(form)
 
-        pred = form[:].sum(axis = 1)
-        #st.write(pred[0])
-        scale = (10*pred[0]) + 170
-        st.header(f'Your Credit score is {round(scale)}')
-        
+        pred = form[:].sum(axis=1)
+        # st.write(pred[0])
+        scale = (10 * pred[0]) + 170
+        # st.markdown(
+        #    f"Your Credit score is {round(scale)}",
+        #    unsafe_allow_html=True,
+        # )
+
         if 800 <= scale <= 850:
-            st.write("Very Low Risk")
+            st.header(
+                f"Your credit score is {round(scale)}, and you are at a very low risk",
+                # unsafe_allow_html=True,
+            )
         elif 750 <= scale <= 799:
-            st.write("Low Risk")
+            st.header(
+                f"Your credit score is {round(scale)}, and you are at a low risk",
+                # unsafe_allow_html=True,
+            )
         elif 700 <= scale <= 749:
-            st.write("Moderate Risk")
+            st.header(
+                f"Your credit score is {round(scale)}, and you are at a moderate risk",
+                # unsafe_allow_html=True,
+            )
         elif 650 <= scale <= 699:
-            st.write("High Risk")
+            st.header(
+                f"Your credit score is {round(scale)}, and you are at a high risk",
+                # unsafe_allow_html=True,
+            )
         elif scale < 650:
-            st.write("Very High Risk")
+            st.header(
+                f"Your credit score is {round(scale)}, and you are at a very high risk",
+                # unsafe_allow_html=True,
+            )
 
 
 elif choose == "About":
