@@ -119,7 +119,8 @@ elif choose == "Health":
 
         for row in df.index:
             df.at[row, "Coverage"] = calculate_coverage(
-                df.at[row, "Doctors"], df.at[row, "Nurses"], df.at[row, "Population"]
+                df.at[row, "Doctors"], df.at[row,
+                                             "Nurses"], df.at[row, "Population"]
             )
 
         # Streamlit UI
@@ -136,11 +137,13 @@ elif choose == "Health":
         if st.sidebar.button("Calculate New Coverage"):
             # Distribute additional workforce proportionally based on population
             df["Additional Doctors"] = np.round(
-                (df["Population"] / df["Population"].sum() * state_additional_doctors),
+                (df["Population"] / df["Population"].sum()
+                 * state_additional_doctors),
                 0,
             ).astype(int)
             df["Additional Nurses"] = np.round(
-                (df["Population"] / df["Population"].sum() * state_additional_nurses), 0
+                (df["Population"] / df["Population"].sum()
+                 * state_additional_nurses), 0
             ).astype(int)
 
             # Calculate new coverage with proposed additions
@@ -329,18 +332,21 @@ elif choose == "Health":
         df_scenario["PHC"] = df["PHC"] * (1 + phc_increase / 100)
 
         # Predict outpatient attendance for the scenario
-        predictions_scenario = model.predict(df_scenario[["PHC", "Population 2022"]])
+        predictions_scenario = model.predict(
+            df_scenario[["PHC", "Population 2022"]])
 
         for row in df["Outpatient Attendance"].index:
             if df.at[row, "Outpatient Attendance"] - predictions_scenario[row] < 0:
                 df.at[row, "New Outpatient Attendance"] = 0
             else:
                 df.at[row, "New Outpatient Attendance"] = (
-                    df.at[row, "Outpatient Attendance"] - predictions_scenario[row]
+                    df.at[row, "Outpatient Attendance"] -
+                    predictions_scenario[row]
                 )
 
         df_scenario["New PHC"] = np.round(df_scenario["PHC"])
-        df["New Outpatient Attendance"] = np.round(df["New Outpatient Attendance"])
+        df["New Outpatient Attendance"] = np.round(
+            df["New Outpatient Attendance"])
 
         # Compile the results into a dataframe
         scenario_results = pd.DataFrame(
@@ -433,7 +439,8 @@ elif choose == "Health":
         # Visualization
         st.write("#### Scenario Over All Local Government Area")
         st.bar_chart(
-            scenario_results.set_index("LGA")["Estimated Outpatient Attendance"]
+            scenario_results.set_index(
+                "LGA")["Estimated Outpatient Attendance"]
         )
 
     elif option == "Health Insurance":
@@ -448,7 +455,8 @@ elif choose == "Health":
         selected_lga = st.sidebar.selectbox("Select LGA", df["LGA"])
 
         # Slider for enrollment rate adjustment
-        adjustment = st.sidebar.slider("Enrollment Rate Adjustment (%)", 0, 100, 5, 5)
+        adjustment = st.sidebar.slider(
+            "Enrollment Rate Adjustment (%)", 0, 100, 5, 5)
 
         # Predict function
         def predict_metrics(enrollment_rate_increase):
@@ -468,8 +476,10 @@ elif choose == "Health":
             model_outpatient.fit(X, y_outpatient)
 
             # Predictions for the specified enrollment rate increase
-            predicted_death_rate = model_death.predict([[enrollment_rate_increase]])
-            predicted_inpatient = model_inpatient.predict([[enrollment_rate_increase]])
+            predicted_death_rate = model_death.predict(
+                [[enrollment_rate_increase]])
+            predicted_inpatient = model_inpatient.predict(
+                [[enrollment_rate_increase]])
             predicted_outpatient = model_outpatient.predict(
                 [[enrollment_rate_increase]]
             )
@@ -499,7 +509,8 @@ elif choose == "Health":
         st.write(lga_data.to_html(index=False), unsafe_allow_html=True)
 
         # Calculate adjusted values based on slider input
-        adjusted_enrollment_rate = lga_data["enrollment_rate"] * (1 + adjustment / 100)
+        adjusted_enrollment_rate = lga_data["enrollment_rate"] * \
+            (1 + adjustment / 100)
         lga_data["adjusted_enrollment_rate"] = adjusted_enrollment_rate
 
         # Prediction and display based on slider input
@@ -543,7 +554,8 @@ elif choose == "Education":
 
     # Calculate the percentage coverage in each LGA
     lga_ta["Percentage Coverage"] = round(
-        (ideal_students_per_teacher / lga_ta["Actual Students Per Teacher"]) * 100, 2
+        (ideal_students_per_teacher /
+         lga_ta["Actual Students Per Teacher"]) * 100, 2
     )
 
     lga_ta = lga_ta.sort_values(by="Percentage Coverage", ascending=True)
@@ -553,8 +565,10 @@ elif choose == "Education":
         df, lga, additional_teachers, additional_students, ideal_students_per_teacher
     ):
         lga_row = df[df["LGA"] == lga]
-        new_total_teachers = lga_row["Total Teachers"].values[0] + additional_teachers
-        new_total_students = lga_row["Total Students"].values[0] + additional_students
+        new_total_teachers = lga_row["Total Teachers"].values[0] + \
+            additional_teachers
+        new_total_students = lga_row["Total Students"].values[0] + \
+            additional_students
         new_actual_students_per_teacher = new_total_students / new_total_teachers
         new_percentage_coverage = round(
             (ideal_students_per_teacher / new_actual_students_per_teacher) * 100, 2
@@ -629,7 +643,8 @@ elif choose == "Education":
         new_df = pd.DataFrame(new_data)
         st.subheader("New Coverage Data")
         st.write(new_df.to_html(index=False), unsafe_allow_html=True)
-        st.write(f"The new percentage coverage for {lga} is {new_percentage_coverage}%")
+        st.write(
+            f"The new percentage coverage for {lga} is {new_percentage_coverage}%")
 
     st.sidebar.subheader("Optimal Coverage")
     target_coverage = st.sidebar.slider("Select Target Coverage", 0, 100, 0)
@@ -657,7 +672,8 @@ elif choose == "Education":
         new_df = pd.DataFrame(new_data)
         st.subheader("New Coverage Data")
         st.write(new_df.to_html(index=False), unsafe_allow_html=True)
-        st.write(f"The new percentage coverage target for {lga} is {target_coverage}%")
+        st.write(
+            f"The new percentage coverage target for {lga} is {target_coverage}%")
 
     # Display original data
     st.subheader("Current Coverage Data")
@@ -855,7 +871,8 @@ elif choose == "Agriculture":
     ]
 
     # Drop all rows where the 'Date of Birth' and the 'Average Annual Income' empty.
-    merged.dropna(subset=["Date of Birth", "Average Annual Income"], inplace=True)
+    merged.dropna(
+        subset=["Date of Birth", "Average Annual Income"], inplace=True)
 
     # Drop rows with bad date type
     row = merged["Date of Birth"].apply(lambda x: isinstance(x, time))
@@ -933,7 +950,8 @@ elif choose == "Agriculture":
     ]
     cooperative = ["No", "Yes"]
     No_agric_activity = ["'4-7'", "'1-3'", "'8-11'"]
-    Incom = ["100k-1m", "0-100k", "1m-10m", "10m-100m", "100m-500m", "500m and above"]
+    Incom = ["100k-1m", "0-100k", "1m-10m",
+             "10m-100m", "100m-500m", "500m and above"]
     loan = ["yes", "no"]
     Food = ["yes", "no"]
     Cash = ["yes", "no"]
@@ -946,9 +964,11 @@ elif choose == "Agriculture":
         ag = st.number_input("How old are you?", value=0)
         edu = st.selectbox("Educational Level", edu_level)
         bank = st.selectbox("Do you have a bank account?", bank_acc)
-        id_ = st.selectbox("Do you have a mode of Identification (ID card)?", ID)
+        id_ = st.selectbox(
+            "Do you have a mode of Identification (ID card)?", ID)
         ten = st.selectbox("Do you own your farmland?", land_ten)
-        farmsize = st.selectbox("What is the size of your farm land?", farm_size)
+        farmsize = st.selectbox(
+            "What is the size of your farm land?", farm_size)
         incsource = st.selectbox(
             "What is your major source of income?", agric_incom_source
         )
