@@ -10,6 +10,8 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
 from datetime import datetime as t
 from datetime import time
+import warnings
+warnings.filterwarnings("ignore")
 
 
 # Setup and styling
