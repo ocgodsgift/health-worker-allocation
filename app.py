@@ -339,7 +339,7 @@ elif choose == "Health":
                 df.at[row, "New Outpatient Attendance"] = 0
             else:
                 df.at[row, "New Outpatient Attendance"] = (
-                        df.at[row, "Outpatient Attendance"] - predictions_scenario[row]
+                    df.at[row, "Outpatient Attendance"] - predictions_scenario[row]
                 )
 
         df_scenario["New PHC"] = np.round(df_scenario["PHC"])
@@ -362,23 +362,23 @@ elif choose == "Health":
 
         # Calculate the reduction in outpatient attendance and percentage reduction
         lga_results["Reduction in Outpatient Attendance"] = (
-                lga_results["Current Outpatient Attendance"]
-                - lga_results["Estimated Outpatient Attendance"]
+            lga_results["Current Outpatient Attendance"]
+            - lga_results["Estimated Outpatient Attendance"]
         )
         lga_results["Reduction Percentage"] = (
-                                                      lga_results["Reduction in Outpatient Attendance"]
-                                                      / lga_results["Current Outpatient Attendance"]
-                                              ) * 100
+            lga_results["Reduction in Outpatient Attendance"]
+            / lga_results["Current Outpatient Attendance"]
+        ) * 100
 
         # Explanation logic
         def generate_explanation(
-                lga,
-                current_phc,
-                new_phc,
-                current_attendance,
-                new_attendance,
-                reduction,
-                reduction_percentage,
+            lga,
+            current_phc,
+            new_phc,
+            current_attendance,
+            new_attendance,
+            reduction,
+            reduction_percentage,
         ):
             new_phc = int(new_phc)
             reduction = int(reduction)
@@ -552,7 +552,7 @@ elif choose == "Education":
 
     # Function to calculate percentage coverage
     def calculate_coverage(
-            df, lga, additional_teachers, additional_students, ideal_students_per_teacher
+        df, lga, additional_teachers, additional_students, ideal_students_per_teacher
     ):
         lga_row = df[df["LGA"] == lga]
         new_total_teachers = int(
@@ -569,7 +569,7 @@ elif choose == "Education":
 
     # Function to calculate the required additional teachers and students to achieve a desired percentage coverage
     def calculate_coverage_to_reach(
-            df, lga, target_coverage, ideal_students_per_teacher
+        df, lga, target_coverage, ideal_students_per_teacher
     ):
         lga_row = df[df["LGA"] == lga]
         total_teachers = lga_row["Total Teachers"].values[0]
@@ -625,7 +625,7 @@ elif choose == "Education":
         lga_ta["Percentage Coverage"] = round(
             (ideal_students_per_teacher / lga_ta["Actual Students Per Teacher"]) * 100,
             2,
-            )
+        )
 
         lga_ta = lga_ta.sort_values(by="Percentage Coverage", ascending=True)
 
@@ -795,20 +795,20 @@ elif choose == "Agriculture":
         df[
             ["Income range", "Do you have a bank account?", "Identification", "loan"]
         ] = (
-                df[
-                    [
-                        "Income range",
-                        "Do you have a bank account?",
-                        "Identification",
-                        "loan",
-                    ]
+            df[
+                [
+                    "Income range",
+                    "Do you have a bank account?",
+                    "Identification",
+                    "loan",
                 ]
-                * 4
+            ]
+            * 4
         )
 
         # Farm land Information
         df[["Type of Land Tenure", "Size of Farm"]] = (
-                df[["Type of Land Tenure", "Size of Farm"]] * 2
+            df[["Type of Land Tenure", "Size of Farm"]] * 2
         )
 
         # Agricultural Activity
@@ -822,17 +822,17 @@ elif choose == "Agriculture":
                 "Livestock",
             ]
         ] = (
-                df[
-                    [
-                        "Major Source of Income(Agriculture)",
-                        "Are you in a cooperative?",
-                        "Food",
-                        "Cash",
-                        "Aquatic",
-                        "Livestock",
-                    ]
+            df[
+                [
+                    "Major Source of Income(Agriculture)",
+                    "Are you in a cooperative?",
+                    "Food",
+                    "Cash",
+                    "Aquatic",
+                    "Livestock",
                 ]
-                * 3
+            ]
+            * 3
         )
         return df
 
