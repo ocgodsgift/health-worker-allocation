@@ -127,16 +127,16 @@ elif choose == "Health":
 
         # Streamlit UI
         # Sidebar state-wide adjustment inputs
-        st.sidebar.header("State Health Workers Additions")
-        state_additional_doctors = st.sidebar.number_input(
+        st.header("State Health Workers Additions")
+        state_additional_doctors = st.number_input(
             "Additional Doctors (State-wide)", min_value=0, value=0
         )
-        state_additional_nurses = st.sidebar.number_input(
+        state_additional_nurses = st.number_input(
             "Additional Nurses (State-wide)", min_value=0, value=0
         )
 
         # Add a button to trigger the calculation
-        if st.sidebar.button("Calculate New Coverage"):
+        if st.button("Calculate New Coverage"):
             # Distribute additional workforce proportionally based on population
             df["Additional Doctors"] = np.round(
                 (df["Population"] / df["Population"].sum() * state_additional_doctors),
@@ -237,7 +237,7 @@ elif choose == "Health":
             )
 
             # Graphs
-            st.write("#### Visualizations")
+            st.write("#### Projected Distribution of Additional Nurses and Doctors")
 
             # Bar chart for doctors and nurses
             st.bar_chart(df.set_index("LGA")[["New Doctors", "New Nurses"]])
@@ -321,11 +321,11 @@ elif choose == "Health":
         st.write("### Scenario Analysis: Impact of PHCs on Outpatient Attendance")
 
         # Sidebar Inputs
-        st.sidebar.header("Adjust Scenario Parameters")
-        phc_increase = st.sidebar.slider("Increase in PHCs (%)", 0, 100, 10)
+        st.header("Adjust Scenario Parameters")
+        phc_increase = st.slider("Increase in PHCs (%)", 0, 100, 10)
 
         # LGA Selection
-        selected_lga = st.sidebar.selectbox("Select LGA", df["LGA"])
+        selected_lga = st.selectbox("Select LGA", df["LGA"])
 
         # Apply the percentage increases
         df_scenario = df.copy()
@@ -339,7 +339,7 @@ elif choose == "Health":
                 df.at[row, "New Outpatient Attendance"] = 0
             else:
                 df.at[row, "New Outpatient Attendance"] = (
-                    df.at[row, "Outpatient Attendance"] - predictions_scenario[row]
+                        df.at[row, "Outpatient Attendance"] - predictions_scenario[row]
                 )
 
         df_scenario["New PHC"] = np.round(df_scenario["PHC"])
@@ -362,23 +362,23 @@ elif choose == "Health":
 
         # Calculate the reduction in outpatient attendance and percentage reduction
         lga_results["Reduction in Outpatient Attendance"] = (
-            lga_results["Current Outpatient Attendance"]
-            - lga_results["Estimated Outpatient Attendance"]
+                lga_results["Current Outpatient Attendance"]
+                - lga_results["Estimated Outpatient Attendance"]
         )
         lga_results["Reduction Percentage"] = (
-            lga_results["Reduction in Outpatient Attendance"]
-            / lga_results["Current Outpatient Attendance"]
-        ) * 100
+                                                      lga_results["Reduction in Outpatient Attendance"]
+                                                      / lga_results["Current Outpatient Attendance"]
+                                              ) * 100
 
         # Explanation logic
         def generate_explanation(
-            lga,
-            current_phc,
-            new_phc,
-            current_attendance,
-            new_attendance,
-            reduction,
-            reduction_percentage,
+                lga,
+                current_phc,
+                new_phc,
+                current_attendance,
+                new_attendance,
+                reduction,
+                reduction_percentage,
         ):
             new_phc = int(new_phc)
             reduction = int(reduction)
@@ -444,20 +444,19 @@ elif choose == "Health":
         df = pd.read_excel("health_insurance.xlsx")
 
         # Sidebar title and header
-        st.sidebar.title("EHIC Scenario Analysis")
-        # st.sidebar.header("Select LGA and Adjust Enrollment Rate")
+        st.title("EHIC Scenario Analysis")
 
         # Dropdown to select LGA
-        selected_lga = st.sidebar.selectbox("Select LGA", df["LGA"])
+        selected_lga = st.selectbox("Select LGA", df["LGA"])
 
         # Slider for enrollment rate adjustment
-        adjustment = st.sidebar.slider("Enrollment Rate Adjustment (%)", 0, 100, 5, 5)
+        adjustment = st.slider("Enrollment Rate Adjustment (%)", 0, 100, 5, 5)
 
         # Predict function
         def predict_metrics(enrollment_rate_increase):
-            X = df[["enrollment_rate"]]
-            y_death = df["death_rate"]
-            y_inpatient = df["In-patient"]
+            X = df[["Enrollment Rate"]]
+            y_death = df["Death Rate"]
+            y_inpatient = df["Inpatient"]
             y_outpatient = df["Outpatient"]
 
             # Initialize Linear Regression models
@@ -502,7 +501,7 @@ elif choose == "Health":
         st.write(lga_data.to_html(index=False), unsafe_allow_html=True)
 
         # Calculate adjusted values based on slider input
-        adjusted_enrollment_rate = lga_data["enrollment_rate"] * (1 + adjustment / 100)
+        adjusted_enrollment_rate = lga_data["Enrollment Rate"] * (1 + adjustment / 100)
         lga_data["adjusted_enrollment_rate"] = adjusted_enrollment_rate
 
         # Prediction and display based on slider input
@@ -513,7 +512,7 @@ elif choose == "Health":
         # Display predicted metrics as a dataframe
         st.write("#### Predicted Metrics")
         predicted_data = {
-            "Metric": ["In-patient", "Out-patient", "Death Rate"],
+            "Metric": ["Inpatient", "Out-patient", "Death Rate"],
             "Outcomes": [
                 round(predicted_inpatient, 2),
                 round(predicted_outpatient, 2),
@@ -553,7 +552,7 @@ elif choose == "Education":
 
     # Function to calculate percentage coverage
     def calculate_coverage(
-        df, lga, additional_teachers, additional_students, ideal_students_per_teacher
+            df, lga, additional_teachers, additional_students, ideal_students_per_teacher
     ):
         lga_row = df[df["LGA"] == lga]
         new_total_teachers = int(
@@ -570,7 +569,7 @@ elif choose == "Education":
 
     # Function to calculate the required additional teachers and students to achieve a desired percentage coverage
     def calculate_coverage_to_reach(
-        df, lga, target_coverage, ideal_students_per_teacher
+            df, lga, target_coverage, ideal_students_per_teacher
     ):
         lga_row = df[df["LGA"] == lga]
         total_teachers = lga_row["Total Teachers"].values[0]
@@ -626,7 +625,7 @@ elif choose == "Education":
         lga_ta["Percentage Coverage"] = round(
             (ideal_students_per_teacher / lga_ta["Actual Students Per Teacher"]) * 100,
             2,
-        )
+            )
 
         lga_ta = lga_ta.sort_values(by="Percentage Coverage", ascending=True)
 
@@ -796,20 +795,20 @@ elif choose == "Agriculture":
         df[
             ["Income range", "Do you have a bank account?", "Identification", "loan"]
         ] = (
-            df[
-                [
-                    "Income range",
-                    "Do you have a bank account?",
-                    "Identification",
-                    "loan",
+                df[
+                    [
+                        "Income range",
+                        "Do you have a bank account?",
+                        "Identification",
+                        "loan",
+                    ]
                 ]
-            ]
-            * 4
+                * 4
         )
 
         # Farm land Information
         df[["Type of Land Tenure", "Size of Farm"]] = (
-            df[["Type of Land Tenure", "Size of Farm"]] * 2
+                df[["Type of Land Tenure", "Size of Farm"]] * 2
         )
 
         # Agricultural Activity
@@ -823,17 +822,17 @@ elif choose == "Agriculture":
                 "Livestock",
             ]
         ] = (
-            df[
-                [
-                    "Major Source of Income(Agriculture)",
-                    "Are you in a cooperative?",
-                    "Food",
-                    "Cash",
-                    "Aquatic",
-                    "Livestock",
+                df[
+                    [
+                        "Major Source of Income(Agriculture)",
+                        "Are you in a cooperative?",
+                        "Food",
+                        "Cash",
+                        "Aquatic",
+                        "Livestock",
+                    ]
                 ]
-            ]
-            * 3
+                * 3
         )
         return df
 
