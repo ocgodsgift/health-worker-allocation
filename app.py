@@ -17,8 +17,8 @@ from email.mime.text import MIMEText
 from style_css import style
 
 # Download necessary NLTK data
-nltk.download('punkt')
-nltk.download('stopwords')
+nltk.download('all')
+stopwords = stopwords.words('english')
 
 warnings.filterwarnings("ignore")
 
