@@ -1,4 +1,6 @@
-import pandas as pd, numpy as np, streamlit as st
+import pandas as pd
+import numpy as np
+import streamlit as st
 from collections import Counter
 import plotly.express as px
 from datetime import datetime, timedelta
@@ -10,14 +12,16 @@ from datetime import datetime as t
 from datetime import time
 import warnings
 import nltk
+import os
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import smtplib
 from email.mime.text import MIMEText
 from style_css import style
 
-# Download necessary NLTK data
-nltk.download('all')
+# Set the NLTK data path to the local directory
+nltk_data_path = os.path.join(os.path.dirname(__file__), 'nltk_data')
+nltk.data.path.append(nltk_data_path)
 
 warnings.filterwarnings("ignore")
 
@@ -328,7 +332,7 @@ elif choose == "Health":
         # Keywords and phrases for matching
         keywords = ['cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'flu', 'rash']
         phrases = ["outbreak of", "cases of", "suffering from", "fear of", "pandemic of"]
-        stopwords = stopwords.words('english')
+        stop_words = set(stopwords.words('english'))
 
         # Function to extract relevant information
         def extract_information(comment):
@@ -368,7 +372,7 @@ elif choose == "Health":
                 # msg['To'] = 'recipient_email@example.com'
                 # with smtplib.SMTP('smtp.example.com', 587) as server:
                 #     server.login('your_email@example.com', 'your_password')
-                #     server.sendmail('your_email@example.com', 'recipient_email@example.com', msg.as_string())        
+                #     server.sendmail('your_email@example.com', 'recipient_email@example.com', msg.as_string())
 
         # Streamlit app display
         st.subheader('Outbreak Frequency Report')
@@ -376,9 +380,9 @@ elif choose == "Health":
         # Plotting the results using Plotly (Bar Chart)
         if not keyword_counts_df.empty:
             fig_bar = px.bar(
-                keyword_counts_df, 
-                x='Keyword', 
-                y='Count', 
+                keyword_counts_df,
+                x='Keyword',
+                y='Count',
                 title='Frequency of Outbreaks by Report',
                 labels={'Keyword': 'Outbreaks', 'Count': 'Report Frequency'},
                 color_discrete_sequence=px.colors.qualitative.Set1,
@@ -754,16 +758,6 @@ elif choose == "Education":
                 "LGA": [lga],
                 "Additional Teachers": [additional_teachers],
                 "Additional Students": [additional_students],
-                # "Current Coverage": [lga][
-                #    round(
-                #        (
-                #            ideal_students_per_teacher
-                #            / lga_ta["Actual Students Per Teacher"]
-                #        )
-                #        * 100,
-                #        2,
-                #    )
-                # ],
                 "New Total Students": [new_total_students],
                 "New Total Teachers": [new_total_teachers],
                 "New Percentage Coverage": [new_percentage_coverage],
