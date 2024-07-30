@@ -18,7 +18,6 @@ from style_css import style
 
 # Download necessary NLTK data
 nltk.download('all')
-stopwords = stopwords.words('english')
 
 warnings.filterwarnings("ignore")
 
@@ -329,7 +328,7 @@ elif choose == "Health":
         # Keywords and phrases for matching
         keywords = ['cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'flu', 'rash']
         phrases = ["outbreak of", "cases of", "suffering from", "fear of", "pandemic of"]
-        stop_words = set(stopwords.words('english'))
+        stopwords = stopwords.words('english')
 
         # Function to extract relevant information
         def extract_information(comment):
