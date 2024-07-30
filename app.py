@@ -9,23 +9,18 @@ from sklearn.linear_model import LinearRegression
 from datetime import datetime as t
 from datetime import time
 import warnings
-import spacy
-from spacy.matcher import PhraseMatcher
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 import smtplib
 from email.mime.text import MIMEText
 from style_css import style
 
+# Download necessary NLTK data
+nltk.download('punkt')
+nltk.download('stopwords')
+
 warnings.filterwarnings("ignore")
-
-# Load spaCy model and prepare PhraseMatcher
-# Ensure the spaCy model is installed
-try:
-    nlp = spacy.load('en_core_web_sm')
-except OSError:
-    from spacy.cli import download
-
-    download('en_core_web_sm')
-    nlp = spacy.load('en_core_web_sm')
 
 # Setup and styling
 st.set_page_config(
@@ -331,22 +326,16 @@ elif choose == "Health":
         df[['Event Date', 'Event Time']] = df['Event date'].str.split(" ", expand=True)
         df['Event Date'] = pd.to_datetime(df['Event Date'])
 
-
+        # Keywords and phrases for matching
         keywords = ['cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'flu', 'rash']
         phrases = ["outbreak of", "cases of", "suffering from", "fear of", "pandemic of"]
-        matcher = PhraseMatcher(nlp.vocab)
-        patterns = [nlp(text) for text in keywords + phrases]
-        matcher.add("KEYWORDS", None, *patterns)
+        stop_words = set(stopwords.words('english'))
 
         # Function to extract relevant information
         def extract_information(comment):
-            comment = comment.lower()
-            doc = nlp(comment)
-            matches = matcher(doc)
-            extracted_info = []
-            for match_id, start, end in matches:
-                span = doc[start:end]
-                extracted_info.append(span.text)
+            tokens = word_tokenize(comment.lower())
+            filtered_tokens = [word for word in tokens if word not in stop_words]
+            extracted_info = [word for word in filtered_tokens if word in keywords or word in phrases]
             return extracted_info
 
         # Apply the extraction function to the 'Any Comment' column
