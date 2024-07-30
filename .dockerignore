@@ -137,3 +137,7 @@ venv/
 flagged/
 __pycache__/
 .vscode/
+.DS_Store
+nltk_data/.DS_Store
+nltk_data/corpora/.DS_Store
+nltk_data/corpora/framenet_v15/.DS_Store
