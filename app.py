@@ -79,7 +79,7 @@ elif choose == "Health":
 
     option = st.selectbox(
         "",
-        ("Health Worker Allocation", "Health Insurance", "Outpatient Scenario"),
+        ("Health Worker Allocation", "Health Insurance", "Outpatient Scenario", "Early Warning Alert System"),
         index=0,
     )
 
@@ -304,7 +304,7 @@ elif choose == "Health":
             To achieve good healthcare coverage, there should be at least 44.5 health workers (including doctors and nurses) for every 10,000 people.
             """
         )
-    elif option == "Early Alert System":
+    elif option == "Early Warning Alert System":
 
         # Add a description
         st.markdown("""
@@ -323,7 +323,14 @@ elif choose == "Health":
         df['Event Date'] = pd.to_datetime(df['Event Date'])
 
         # Load spaCy model and prepare PhraseMatcher
-        nlp = spacy.load('en_core_web_sm')
+        # Ensure the spaCy model is installed
+        try:
+            nlp = spacy.load('en_core_web_sm')
+        except OSError:
+            from spacy.cli import download
+
+            download('en_core_web_sm')
+            nlp = spacy.load('en_core_web_sm')
 
         keywords = ['cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'flu', 'rash']
         phrases = ["outbreak of", "cases of", "suffering from", "fear of", "pandemic of"]
