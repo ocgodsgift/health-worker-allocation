@@ -16,4 +16,5 @@ autopep8
 scikit-learn
 openpyxl
 spacy==3.5.2
+thinc==8.1.0
 xlrd
