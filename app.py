@@ -1,16 +1,19 @@
-import streamlit as st
+import pandas as pd, numpy as np, streamlit as st
+from collections import Counter
+import plotly.express as px
+from datetime import datetime, timedelta
 from streamlit_option_menu import option_menu
-from style_css import style
-import pandas as pd
-import numpy as np
 from slideshow import slideshow
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
 from datetime import datetime as t
 from datetime import time
 import warnings
+import spacy
+from spacy.matcher import PhraseMatcher
+import smtplib
+from email.mime.text import MIMEText
+from style_css import style
 
 warnings.filterwarnings("ignore")
 
@@ -301,6 +304,118 @@ elif choose == "Health":
             To achieve good healthcare coverage, there should be at least 44.5 health workers (including doctors and nurses) for every 10,000 people.
             """
         )
+    elif option == "Early Alert System":
+
+        # Add a description
+        st.markdown("""
+            #### Description
+            This dashboard presents the frequency of various outbreaks reported in the health citizens' feedback.
+            The data highlights the occurrence of diseases such as cholera, measles, lassa fever, malaria, and others based on the comments provided by citizens.
+            The most frequently reported outbreak is emphasized for quick identification.
+            """)
+
+
+        # Load data
+        df = pd.read_excel('Health citizens feedback.xls')
+
+        # Preprocess 'Event Date' column
+        df[['Event Date', 'Event Time']] = df['Event date'].str.split(" ", expand=True)
+        df['Event Date'] = pd.to_datetime(df['Event Date'])
+
+        # Load spaCy model and prepare PhraseMatcher
+        nlp = spacy.load('en_core_web_sm')
+
+        keywords = ['cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'flu', 'rash']
+        phrases = ["outbreak of", "cases of", "suffering from", "fear of", "pandemic of"]
+        matcher = PhraseMatcher(nlp.vocab)
+        patterns = [nlp(text) for text in keywords + phrases]
+        matcher.add("KEYWORDS", None, *patterns)
+
+        # Function to extract relevant information
+        def extract_information(comment):
+            comment = comment.lower()
+            doc = nlp(comment)
+            matches = matcher(doc)
+            extracted_info = []
+            for match_id, start, end in matches:
+                span = doc[start:end]
+                extracted_info.append(span.text)
+            return extracted_info
+
+        # Apply the extraction function to the 'Any Comment' column
+        df['Extracted Info'] = df['Any Comment'].apply(lambda x: extract_information(str(x)))
+
+        # Count occurrences of keywords
+        total_keyword_counts = Counter([item for sublist in df['Extracted Info'] for item in sublist if item in keywords])
+
+        # Convert the result to a DataFrame
+        keyword_counts_df = pd.DataFrame(total_keyword_counts.items(), columns=['Keyword', 'Count'])
+        keyword_counts_df = keyword_counts_df.sort_values(by='Count', ascending=False)
+
+        # Find the most frequent outbreak
+        most_frequent_outbreak = keyword_counts_df.iloc[0] if not keyword_counts_df.empty else None
+
+        # Alert threshold setup
+        threshold = 6
+        time_frame = timedelta(weeks=1)
+        current_date = datetime.now()
+
+        # Check for recent occurrences exceeding the threshold and display alerts
+        for keyword in keywords:
+            recent_count = df[(df['Event Date'] >= current_date - time_frame) & (df['Any Comment'].str.contains(keyword, case=False, na=False))].shape[0]
+            if recent_count >= threshold:
+                st.error(f"ALERT: {keyword.capitalize()} has been reported {recent_count} times in the last week!")
+                # Example email notification (conceptual)
+                # Send email notification
+                # msg = MIMEText(f"ALERT: {keyword.capitalize()} has been reported {recent_count} times in the last week!")
+                # msg['Subject'] = 'Health Alert Notification'
+                # msg['From'] = 'your_email@example.com'
+                # msg['To'] = 'recipient_email@example.com'
+                # with smtplib.SMTP('smtp.example.com', 587) as server:
+                #     server.login('your_email@example.com', 'your_password')
+                #     server.sendmail('your_email@example.com', 'recipient_email@example.com', msg.as_string())        
+
+        # Streamlit app display
+        st.subheader('Outbreak Frequency Report')
+
+        # Plotting the results using Plotly (Bar Chart)
+        if not keyword_counts_df.empty:
+            fig_bar = px.bar(
+                keyword_counts_df, 
+                x='Keyword', 
+                y='Count', 
+                title='Frequency of Outbreaks by Report',
+                labels={'Keyword': 'Outbreaks', 'Count': 'Report Frequency'},
+                color_discrete_sequence=px.colors.qualitative.Set1,
+                template='plotly_white'
+            )
+
+            # Highlight the most frequent outbreak in red
+            fig_bar.update_traces(marker_color=['red' if keyword == most_frequent_outbreak['Keyword'] else 'orange' for keyword in keyword_counts_df['Keyword']])
+
+            # Display the bar chart
+            st.plotly_chart(fig_bar)
+
+            # Highlight the most frequent outbreak
+            st.error(f"The most frequently reported outbreak is {str(most_frequent_outbreak['Keyword']).title()} with {most_frequent_outbreak['Count']} reports.")
+
+        # Calculate weekly reports
+        df['Week'] = df['Event Date'].dt.to_period('W').apply(lambda r: r.start_time)
+        weekly_report_counts = df.groupby('Week').size().reset_index(name='Report Count')
+
+        # Plotting the results using Plotly (Line Chart)
+        fig_line = px.line(
+            weekly_report_counts,
+            x='Week',
+            y='Report Count',
+            title='Weekly Report Frequency',
+            labels={'Week': 'Week', 'Report Count': 'Number of Reports'},
+            template='plotly_white'
+        )
+
+        # Display the line chart
+        st.plotly_chart(fig_line)
+
 
     elif option == "Outpatient Scenario":
 

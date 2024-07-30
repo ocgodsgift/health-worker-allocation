@@ -10,10 +10,9 @@ kaleido
 more-itertools
 pip
 pytest
-streamlit
 streamlit-aggrid
 streamlit-option-menu
 autopep8
-email_validator
 scikit-learn
 openpyxl
+spacy
