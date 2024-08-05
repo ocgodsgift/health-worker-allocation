@@ -134,7 +134,7 @@ elif choose == "Health":
             )
 
         # Streamlit UI
-        # Sidebar state-wide adjustment inputs
+        # Sidebar state-wide adjustment inputscle
         st.header("State Health Workers Additions")
         state_additional_doctors = st.number_input(
             "Additional Doctors (State-wide)", min_value=0, value=0
@@ -384,7 +384,7 @@ elif choose == "Health":
             st.error(f"The most frequently reported outbreak is {str(most_frequent_outbreak['Keyword']).title()} with {most_frequent_outbreak['Count']} reports.")
 
         # Calculate weekly reports
-        df['Week'] = df['Event Date'].dt.to_period('W').apply(lambda r: r.start_time)
+        df['Week'] = df['date'].dt.to_period('W').apply(lambda r: r.start_time)
         weekly_report_counts = df.groupby('Week').size().reset_index(name='Report Count')
 
         # Plotting the results using Plotly (Line Chart)
