@@ -15,5 +15,7 @@ streamlit-option-menu
 autopep8
 scikit-learn
 openpyxl
-spacy
+spacy==3.5.2
+thinc==8.1.8
 xlrd
+nltk
