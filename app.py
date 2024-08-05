@@ -8,14 +8,13 @@ from streamlit_option_menu import option_menu
 from slideshow import slideshow
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
-from datetime import datetime as t
 import warnings
 import nltk
 import os
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-import smtplib
-from email.mime.text import MIMEText
+from fetch_data import dataset
+from calculate_threshold_and_alert import trigger
 from style_css import style
 
 # Set the NLTK data path to the local directory
@@ -325,8 +324,20 @@ elif choose == "Health":
 
 
         # Keywords and phrases for matching
-        keywords = ['cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'flu', 'rash']
-        phrases = ["outbreak of", "cases of", "suffering from", "fear of", "pandemic of"]
+        keywords = [
+            'cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'influenza', 'flu', 'rash', 'typhoid', 'dengue', 'tuberculosis',
+            'ebola', 'zika virus', 'yellow fever', 'hepatitis', 'hiv', 'aids', 'covid-19', 'coronavirus', 'swine flu', 'avian flu', 'sars', 'mers',
+            'smallpox', 'polio', 'diarrhea', 'whooping cough', 'scarlet fever', 'rubella', 'mumps', 'chickenpox', 'plague', 'leprosy', 'schistosomiasis',
+            'cough', 'fever', 'rash', 'lassa fever'
+        ]
+        # List of phrases that indicate an outbreak or health alert situation
+        phrases = [
+            "outbreak of", "cases of", "suffering from", "fear of", "pandemic of", "spread of", "rise in", "epidemic of", "emergence of", "reports of",
+            "increasing number of", "surge in", "new cases of", "confirmed cases of", "widespread infection", "health crisis", "public health alert", "quarantine due to",
+            "infection rate of", "contagious outbreak", "public health emergency", "disease outbreak", "viral infection of", "infectious disease", "community spread of",
+            "cluster of cases", "fatalities from", "hospitalizations due to", "symptoms of", "exposure to"
+        ]
+
         stop_words = stopwords.words('english')
 
         # Function to extract relevant information
@@ -348,26 +359,6 @@ elif choose == "Health":
 
         # Find the most frequent outbreak
         most_frequent_outbreak = keyword_counts_df.iloc[0] if not keyword_counts_df.empty else None
-
-        # Alert threshold setup
-        threshold = 6
-        time_frame = timedelta(weeks=1)
-        current_date = datetime.now()
-
-        # Check for recent occurrences exceeding the threshold and display alerts
-        for keyword in keywords:
-            recent_count = df[(df['Event Date'] >= current_date - time_frame) & (df['Any Comment'].str.contains(keyword, case=False, na=False))].shape[0]
-            if recent_count >= threshold:
-                st.error(f"ALERT: {keyword.capitalize()} has been reported {recent_count} times in the last week!")
-                # Example email notification (conceptual)
-                # Send email notification
-                # msg = MIMEText(f"ALERT: {keyword.capitalize()} has been reported {recent_count} times in the last week!")
-                # msg['Subject'] = 'Health Alert Notification'
-                # msg['From'] = 'your_email@example.com'
-                # msg['To'] = 'recipient_email@example.com'
-                # with smtplib.SMTP('smtp.example.com', 587) as server:
-                #     server.login('your_email@example.com', 'your_password')
-                #     server.sendmail('your_email@example.com', 'recipient_email@example.com', msg.as_string())
 
         # Streamlit app display
         st.subheader('Outbreak Frequency Report')
