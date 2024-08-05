@@ -34,7 +34,7 @@ def trigger(data, keywords):
 
     # Check for recent occurrences exceeding the threshold and display alerts
     for keyword in keywords:
-        recent_count = data[(data['date'] >= current_date - time_frame) & (data['comment'].str.contains(keyword, case=False, na=False))].shape[0]
+        recent_count = data[(data['Event Date'] >= current_date - time_frame) & (data['comment'].str.contains(keyword, case=False, na=False))].shape[0]
         if recent_count >= threshold:
             # Email body
             subject = "Early Warning System ALERT!!"

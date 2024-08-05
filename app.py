@@ -13,7 +13,6 @@ import nltk
 import os
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-from fetch_data import dataset
 from calculate_threshold_and_alert import trigger
 from style_css import style
 
@@ -312,7 +311,11 @@ elif choose == "Health":
     elif option == "Early Warning Alert System":
 
         # Load data
-        df = dataset()
+        df = pd.read_csv('Health Related Citizen Reports.csv')
+
+        # Preprocess 'Event Date' column
+        df[['Event Date', 'Event Time']] = df['date'].str.split("T", expand=True)
+        df['Event Date'] = pd.to_datetime(df['Event Date'])
 
         # Add a description
         st.markdown("""
@@ -330,6 +333,7 @@ elif choose == "Health":
             'smallpox', 'polio', 'diarrhea', 'whooping cough', 'scarlet fever', 'rubella', 'mumps', 'chickenpox', 'plague', 'leprosy', 'schistosomiasis',
             'cough', 'fever', 'rash', 'lassa fever'
         ]
+
         # List of phrases that indicate an outbreak or health alert situation
         phrases = [
             "outbreak of", "cases of", "suffering from", "fear of", "pandemic of", "spread of", "rise in", "epidemic of", "emergence of", "reports of",
@@ -384,7 +388,7 @@ elif choose == "Health":
             st.error(f"The most frequently reported outbreak is {str(most_frequent_outbreak['Keyword']).title()} with {most_frequent_outbreak['Count']} reports.")
 
         # Calculate weekly reports
-        df['Week'] = df['date'].dt.to_period('W').apply(lambda r: r.start_time)
+        df['Week'] = df['Event Date'].dt.to_period('W').apply(lambda r: r.start_time)
         weekly_report_counts = df.groupby('Week').size().reset_index(name='Report Count')
 
         # Plotting the results using Plotly (Line Chart)

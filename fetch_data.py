@@ -70,7 +70,7 @@ def dataset():
     df2 = df1[df1['headline'].isin(['Health', 'Public Health'])].reset_index(drop=True)
 
     # Save the output
-    df2.to_csv('Health Related Citizen Reports.csv')
-    df2['date'] = pd.to_datetime(df2['date']).dt.date
+    df2.to_csv('Health Related Citizen Reports.csv', index=False)
 
-    return df2
+if __name__ == "__main__":
+    dataset()
