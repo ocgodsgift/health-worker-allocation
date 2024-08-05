@@ -7,13 +7,12 @@ from slideshow import slideshow
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from datetime import datetime as t
-from datetime import time
 import warnings
 import spacy
 from spacy.matcher import PhraseMatcher
-import smtplib
-from email.mime.text import MIMEText
 from style_css import style
+from fetch_data import dataset
+from calculate_threshold_and_alert import trigger
 
 warnings.filterwarnings("ignore")
 
@@ -306,6 +305,9 @@ elif choose == "Health":
         )
     elif option == "Early Warning Alert System":
 
+        # Load data
+        df = dataset()
+
         # Add a description
         st.markdown("""
             #### Description
@@ -315,25 +317,32 @@ elif choose == "Health":
             """)
 
 
-        # Load data
-        df = pd.read_excel('Health citizens feedback.xls')
-
-        # Preprocess 'Event Date' column
-        df[['Event Date', 'Event Time']] = df['Event date'].str.split(" ", expand=True)
-        df['Event Date'] = pd.to_datetime(df['Event Date'])
-
         # Load spaCy model and prepare PhraseMatcher
         # Ensure the spaCy model is installed
         try:
             nlp = spacy.load('en_core_web_sm')
         except OSError:
             from spacy.cli import download
-
             download('en_core_web_sm')
             nlp = spacy.load('en_core_web_sm')
 
-        keywords = ['cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'flu', 'rash']
-        phrases = ["outbreak of", "cases of", "suffering from", "fear of", "pandemic of"]
+        keywords = [
+            'cholera', 'measles', 'lassa fever', 'malaria', 'meningitis', 'influenza', 'flu', 'rash', 'typhoid', 'dengue', 'tuberculosis',
+            'ebola', 'zika virus', 'yellow fever', 'hepatitis', 'hiv', 'aids', 'covid-19', 'coronavirus', 'swine flu', 'avian flu', 'sars', 'mers',
+            'smallpox', 'polio', 'diarrhea', 'whooping cough', 'scarlet fever', 'rubella', 'mumps', 'chickenpox', 'plague', 'leprosy', 'schistosomiasis',
+            'cough', 'fever', 'rash', 'lassa fever'
+        ]
+
+
+        # List of phrases that indicate an outbreak or health alert situation
+        phrases = [
+            "outbreak of", "cases of", "suffering from", "fear of", "pandemic of", "spread of", "rise in", "epidemic of", "emergence of", "reports of",
+            "increasing number of", "surge in", "new cases of", "confirmed cases of", "widespread infection", "health crisis", "public health alert", "quarantine due to",
+            "infection rate of", "contagious outbreak", "public health emergency", "disease outbreak", "viral infection of", "infectious disease", "community spread of",
+            "cluster of cases", "fatalities from", "hospitalizations due to", "symptoms of", "exposure to"
+        ]
+
+
         matcher = PhraseMatcher(nlp.vocab)
         patterns = [nlp(text) for text in keywords + phrases]
         matcher.add("KEYWORDS", None, *patterns)
@@ -350,7 +359,7 @@ elif choose == "Health":
             return extracted_info
 
         # Apply the extraction function to the 'Any Comment' column
-        df['Extracted Info'] = df['Any Comment'].apply(lambda x: extract_information(str(x)))
+        df['Extracted Info'] = df['comment'].apply(lambda x: extract_information(str(x)))
 
         # Count occurrences of keywords
         total_keyword_counts = Counter([item for sublist in df['Extracted Info'] for item in sublist if item in keywords])
@@ -362,29 +371,8 @@ elif choose == "Health":
         # Find the most frequent outbreak
         most_frequent_outbreak = keyword_counts_df.iloc[0] if not keyword_counts_df.empty else None
 
-        # Alert threshold setup
-        threshold = 6
-        time_frame = timedelta(weeks=1)
-        current_date = datetime.now()
-
-        # Check for recent occurrences exceeding the threshold and display alerts
-        for keyword in keywords:
-            recent_count = df[(df['Event Date'] >= current_date - time_frame) & (df['Any Comment'].str.contains(keyword, case=False, na=False))].shape[0]
-            if recent_count >= threshold:
-                st.error(f"ALERT: {keyword.capitalize()} has been reported {recent_count} times in the last week!")
-                # Example email notification (conceptual)
-                # Send email notification
-                # msg = MIMEText(f"ALERT: {keyword.capitalize()} has been reported {recent_count} times in the last week!")
-                # msg['Subject'] = 'Health Alert Notification'
-                # msg['From'] = 'your_email@example.com'
-                # msg['To'] = 'recipient_email@example.com'
-                # with smtplib.SMTP('smtp.example.com', 587) as server:
-                #     server.login('your_email@example.com', 'your_password')
-                #     server.sendmail('your_email@example.com', 'recipient_email@example.com', msg.as_string())        
-
         # Streamlit app display
         st.subheader('Outbreak Frequency Report')
-
         # Plotting the results using Plotly (Bar Chart)
         if not keyword_counts_df.empty:
             fig_bar = px.bar(
@@ -422,6 +410,9 @@ elif choose == "Health":
 
         # Display the line chart
         st.plotly_chart(fig_line)
+
+        # Alert threshold setup     
+        trigger(data=df, keywords=keywords)
 
 
     elif option == "Outpatient Scenario":
