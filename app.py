@@ -82,25 +82,25 @@ if choose == "Home":
 elif choose == "Health":
 
     option = st.selectbox(
-        "",
-        ("Health Worker Allocation", "Health Insurance", "Outpatient Scenario", "Early Warning Alert System"),
-        index=0,
+        label= "",
+        options = ("Health Worker Allocation", "Early Warning Alert System", "Health Insurance", "Outpatient Scenario"),
+        placeholder = "Search"
     )
 
     if option == "Health Worker Allocation":
 
         st.write(
             """
-            #### What is Health Workforce Density?
+            ##### What is Health Workforce Density?
             Health Workforce Density means the number of healthcare workers (like doctors, nurses, and midwives) available to take care of people in a given area. It's measured by counting how many of these workers are available for every 10,000 people in the population.
 
-            #### Why is it Important?
+            ##### Why is it Important?
             Imagine you're in a town, and there are only a few doctors, nurses, and midwives available. If many people get sick at the same time, there won't be enough healthcare workers to take care of everyone quickly and effectively. Having an adequate number of healthcare workers ensures that people can get medical help when they need it, without long waits or shortages.
 
-            #### How is it Measured?
+            ##### How is it Measured?
             We look at how many doctors, nurses, and midwives there are for every 10,000 people. This gives us a good idea of whether there are enough healthcare workers to meet the needs of the community.
 
-            #### WHO Recommendations
+            ##### WHO Recommendations
             The World Health Organization (WHO) gives us some guidelines on the minimum number of healthcare workers needed to ensure good healthcare services:
 
             Doctors: At least 1 doctor for every 1,000 people. This means for every 10,000 people, there should be at least 10 doctors.
@@ -134,7 +134,7 @@ elif choose == "Health":
 
         # Streamlit UI
         # Sidebar state-wide adjustment inputscle
-        st.header("State Health Workers Additions")
+        st.write("##### State Health Workers Additions")
         state_additional_doctors = st.number_input(
             "Additional Doctors (State-wide)", min_value=0, value=0
         )
@@ -200,7 +200,7 @@ elif choose == "Health":
             )
 
             # Display state-wide coverage status
-            st.write("#### State-Wide Coverage with Proposed Additions")
+            st.write("##### State-Wide Coverage with Proposed Additions")
             if state_coverage > 100:
                 st.error(
                     f"The new coverage of {state_coverage:.2f}% exceeds 100%. Please check the input values."
@@ -223,7 +223,7 @@ elif choose == "Health":
                 )
             #  df['Status'] = df['New Coverage'].apply(lambda x: 'Meets WHO Standard' if x >= WHO_STANDARD else 'Below WHO Standard')
 
-            st.write("#### Health Workforce Data by LGA with Additions")
+            st.write("##### Health Workforce Data by LGA with Additions")
             st.dataframe(
                 df[
                     [
@@ -308,6 +308,7 @@ elif choose == "Health":
             To achieve good healthcare coverage, there should be at least 44.5 health workers (including doctors and nurses) for every 10,000 people.
             """
         )
+
     elif option == "Early Warning Alert System":
 
         # Load data
@@ -632,74 +633,47 @@ elif choose == "Health":
 elif choose == "Education":
 
     # Streamlit interface
-    st.title("Teachers Allocation Scenario Analysis")
-    st.write("Welcome to the Teachers Allocation Scenario Analysis application!")
-    st.write(
-        "This tool is designed to help education administrators and policymakers analyze and optimize the allocation of senior secondary school (SSS) teachers across the 18 Local Government Areas (LGAs) in Edo State."
-    )
+    st.write("This tool is designed to help education administrators and policymakers analyze and optimize the allocation of senior secondary school (SSS) teachers across the 18 Local Government Areas (LGAs) in Edo State.")
 
     # Load the data
     ta_df = pd.read_excel("teachers_allocation.xlsx")
 
-    option = st.selectbox(
-        "",
-        ("Input Parameters", "Optimal Coverage"),
-        index=0,
-    )
+    option = st.selectbox("Select a Method", ("Input Parameters", "Optimal Coverage"), index=0,)
 
     # Group by 'LGA' and calculate the sum of 'Total Students' and 'Total Teachers' for each 'LGA'
-    lga_ta = (
-        ta_df.groupby("LGA")
-        .agg({"Total Students": "sum", "Total Teachers": "sum"})
-        .reset_index()
-    )
+    lga_ta = (ta_df.groupby("LGA").agg({"Total Students": "sum", "Total Teachers": "sum"}).reset_index())
 
     lga = st.selectbox("Select LGA", lga_ta["LGA"])
 
     # Function to calculate percentage coverage
-    def calculate_coverage(
-        df, lga, additional_teachers, additional_students, ideal_students_per_teacher
-    ):
-        lga_row = df[df["LGA"] == lga]
-        new_total_teachers = int(
-            lga_row["Total Teachers"].values[0] + additional_teachers
-        )
+    def calculate_coverage(df, lga, additional_teachers, additional_students, ideal_students_per_teacher):
+        lga_row = df[df["LGA"] == lga] 
+        new_total_teachers = int(lga_row["Total Teachers"].values[0] + additional_teachers)
         new_total_students = lga_row["Total Students"].values[0] + additional_students
-        new_actual_students_per_teacher = round(
-            new_total_students / new_total_teachers, 0
-        )
-        new_percentage_coverage = round(
-            (ideal_students_per_teacher / new_actual_students_per_teacher) * 100, 2
-        )
-        return new_total_students, new_total_teachers, new_percentage_coverage
+        new_actual_students_per_teacher = round(new_total_students / new_total_teachers, 0)
+        new_percentage_coverage = round((ideal_students_per_teacher / new_actual_students_per_teacher) * 100, 2)
+        new_status = "✅ OECD Standard" if new_actual_students_per_teacher <= ideal_students_per_teacher else "❌ Below OECD Standard"
+
+        return new_total_students, new_total_teachers, new_percentage_coverage, new_status
+
 
     # Function to calculate the required additional teachers and students to achieve a desired percentage coverage
-    def calculate_coverage_to_reach(
-        df, lga, target_coverage, ideal_students_per_teacher
-    ):
+    def calculate_coverage_to_reach(df, lga, target_coverage, ideal_students_per_teacher):
         lga_row = df[df["LGA"] == lga]
         total_teachers = lga_row["Total Teachers"].values[0]
         total_students = lga_row["Total Students"].values[0]
 
         # Calculate the required actual students per teacher to achieve the target coverage
-        required_actual_students_per_teacher = int(
-            round(ideal_students_per_teacher / (target_coverage / 100), 0)
-        )
+        required_actual_students_per_teacher = int(round(ideal_students_per_teacher / (target_coverage / 100), 0))
 
         # Calculate the required total number of teachers to achieve the target coverage
-        required_total_teachers = int(
-            round(total_students / required_actual_students_per_teacher, 0)
-        )
+        required_total_teachers = int(round(total_students / required_actual_students_per_teacher, 0))
 
         # Calculate the additional teachers needed
         additional_teachers = int(round(required_total_teachers - total_teachers, 0))
 
-        return (
-            total_students,
-            required_total_teachers,
-            additional_teachers,
-            required_actual_students_per_teacher,
-        )
+        return (total_students, required_total_teachers, additional_teachers,
+        required_actual_students_per_teacher)
 
     global ideal_students_per_teacher
     global additional_teachers
@@ -709,61 +683,51 @@ elif choose == "Education":
     ideal_students_per_teacher = 15
 
     if option == "Input Parameters":
-
-        ideal_students_per_teacher = st.number_input(
-            "Enter number of ideal students per teacher", min_value=15, step=5
-        )
-        additional_teachers = st.number_input(
-            "Enter number of additional teachers", min_value=0, step=1
-        )
-        additional_students = st.number_input(
-            "Enter number of additional students", min_value=0, step=1
-        )
-
+        ideal_students_per_teacher = st.number_input("Enter number of ideal students per teacher", min_value=15, step=5)
+        additional_teachers = st.number_input("Enter number of additional teachers", min_value=0, step=1)
+        additional_students = st.number_input("Enter number of additional students", min_value=0, step=1)
         lga_ta["Total Teachers"] = lga_ta["Total Teachers"].astype(int)
 
         # Calculate the actual number of students per teacher in each LGA
-        lga_ta["Actual Students Per Teacher"] = round(
-            lga_ta["Total Students"] / lga_ta["Total Teachers"], 0
-        ).astype(int)
+        lga_ta["Actual Students Per Teacher"] = round(lga_ta["Total Students"] / lga_ta["Total Teachers"], 0).astype(int)
 
         # Calculate the percentage coverage in each LGA
-        lga_ta["Percentage Coverage"] = round(
-            (ideal_students_per_teacher / lga_ta["Actual Students Per Teacher"]) * 100,
-            2,
-        )
+        lga_ta["Percentage Coverage"] = round((ideal_students_per_teacher / lga_ta["Actual Students Per Teacher"]) * 100, 2)
+
+        # Determine status based on whether the ideal ratio is met
+        lga_ta['Status'] = lga_ta['Actual Students Per Teacher'].apply(
+        lambda x: "✅ OECD Standard" if x <= ideal_students_per_teacher else "❌ Below OECD Standard")
 
         lga_ta = lga_ta.sort_values(by="Percentage Coverage", ascending=True)
 
         # Calculate coverage and display results in a new table
         if st.button("Calculate Coverage"):
-            new_total_students, new_total_teachers, new_percentage_coverage = (
-                calculate_coverage(
-                    lga_ta,
-                    lga,
-                    additional_teachers,
-                    additional_students,
-                    ideal_students_per_teacher,
+            new_total_students, new_total_teachers, new_percentage_coverage, new_status = (
+                    calculate_coverage(
+                        lga_ta,
+                        lga,
+                        additional_teachers,
+                        additional_students,
+                        ideal_students_per_teacher,
+                    )
                 )
-            )
             new_data = {
-                "LGA": [lga],
-                "Additional Teachers": [additional_teachers],
-                "Additional Students": [additional_students],
-                "New Total Students": [new_total_students],
-                "New Total Teachers": [new_total_teachers],
-                "New Percentage Coverage": [new_percentage_coverage],
-            }
+                    "LGA": [lga],
+                    "Additional Teachers": [additional_teachers],
+                    "Additional Students": [additional_students],
+                    "New Total Students": [new_total_students],
+                    "New Total Teachers": [new_total_teachers],
+                    "New Percentage Coverage": [new_percentage_coverage],
+                    "New Status": [new_status]
+                }
             new_df = pd.DataFrame(new_data)
             st.subheader("New Coverage Data")
             st.write(new_df.to_html(index=False), unsafe_allow_html=True)
-            st.write(
-                f"The new percentage coverage for {lga} is {new_percentage_coverage}%"
-            )
+            st.write(f"The new percentage coverage for {lga} is {new_percentage_coverage}%")
 
-        # Display original data
-        st.subheader("Current Coverage Data")
-        st.write(lga_ta.to_html(index=False), unsafe_allow_html=True)
+            # Display original data
+            st.subheader("Current Coverage Data")
+            st.write(lga_ta.to_html(index=False), unsafe_allow_html=True)
 
     elif option == "Optimal Coverage":
         target_coverage = st.slider("Select Target Coverage", 0, 100, 0)
@@ -775,28 +739,31 @@ elif choose == "Education":
                 required_total_teachers,
                 additional_teachers,
                 required_actual_students_per_teacher,
-            ) = calculate_coverage_to_reach(
-                lga_ta, lga, target_coverage, ideal_students_per_teacher
-            )
+                ) = calculate_coverage_to_reach(
+                    lga_ta, lga, target_coverage, ideal_students_per_teacher
+                )
             new_data = {
-                "LGA": [lga],
-                "Total Students": [total_students],
-                "Current Total Teachers": [
-                    lga_ta[lga_ta["LGA"] == lga]["Total Teachers"].values[0]
-                ],
-                "Required Total Teachers": [round(required_total_teachers, 2)],
-                "Additional Teachers Needed": [round(additional_teachers, 2)],
-                "Target Percentage Coverage": [target_coverage],
-            }
+                    "LGA": [lga],
+                    "Total Students": [total_students],
+                    "Current Total Teachers": [
+                        lga_ta[lga_ta["LGA"] == lga]["Total Teachers"].values[0]
+                    ],
+                    "Required Total Teachers": [round(required_total_teachers, 2)],
+                    "Additional Teachers Needed": [round(additional_teachers, 2)],
+                    "Target Percentage Coverage": [target_coverage],
+                }
             new_df = pd.DataFrame(new_data)
             st.subheader("New Coverage Data")
             st.write(new_df.to_html(index=False), unsafe_allow_html=True)
-            st.write(
-                f"The new percentage coverage target for {lga} is {target_coverage}%"
-            )
-
+            st.write(f"The new percentage coverage target for {lga} is {target_coverage}%")
 
 elif choose == "Agriculture":
+
+    st.title("Farmer Credit Scoring System")
+
+    st.write(
+            "The Farmer Credit Scoring System addresses the financial barriers smallholder farmers face due to a lack of traditional credit history byproviding an inclusive evaluation method that considers financial, agricultural, property, and personal information. This system aims to facilitate credit access, helping farmers invest in sustainable growth while supporting the Edo State government in resource allocation for poverty alleviation and farm input distribution. By enhancing financial inclusion, the system fosters a supportive financial ecosystem and strengthens the agricultural economy."
+            )
 
     # grouping the age
     def age_group(df, age):
@@ -979,39 +946,6 @@ elif choose == "Agriculture":
     Aquatic = ["Yes", "No"]
     Livestock = ["Yes", "No"]
 
-    header = st.container(border=True, height=400)
-
-    st.markdown(
-        """
-        <style>
-        .main .block-container {
-            max-height: 100vh;
-            overflow: visible;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    with header:
-        st.title("Farmer Credit Scoring System")
-        st.write(
-            "#### The Farmer Credit Scoring System addresses the financial barriers smallholder farmers face due to a lack of traditional credit history by providing an inclusive evaluation method that considers financial, agricultural, property, and personal information. This system aims to facilitate credit access, helping farmers invest in sustainable growth while supporting the Edo State government in resource allocation for poverty alleviation and farm input distribution. By enhancing financial inclusion, the system fosters a supportive financial ecosystem and strengthens the agricultural economy."
-        )
-
-    col1, col2 = st.columns([2, 1])
-    st.markdown(
-        """
-        <style>
-        .section {
-            border: 2px solid #4CAF50; 
-            padding: 1px;
-            margin: 10px 0;
-            border-radius: 5px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
 
     # with col1:
     with st.form(key="my_form"):
