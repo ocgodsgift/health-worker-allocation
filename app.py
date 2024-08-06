@@ -82,9 +82,10 @@ if choose == "Home":
 elif choose == "Health":
 
     option = st.selectbox(
-        label= "",
-        options = ("Health Worker Allocation", "Early Warning Alert System", "Health Insurance", "Outpatient Scenario"),
-        placeholder = "Search"
+        "",
+        ("Health Worker Allocation", "Health Insurance",
+         "Outpatient Scenario", "Early Warning Alert System"),
+        index=0,
     )
 
     if option == "Health Worker Allocation":
@@ -129,7 +130,8 @@ elif choose == "Health":
 
         for row in df.index:
             df.at[row, "Coverage"] = calculate_coverage(
-                df.at[row, "Doctors"], df.at[row, "Nurses"], df.at[row, "Population"]
+                df.at[row, "Doctors"], df.at[row,
+                                             "Nurses"], df.at[row, "Population"]
             )
 
         # Streamlit UI
@@ -146,11 +148,13 @@ elif choose == "Health":
         if st.button("Calculate New Coverage"):
             # Distribute additional workforce proportionally based on population
             df["Additional Doctors"] = np.round(
-                (df["Population"] / df["Population"].sum() * state_additional_doctors),
+                (df["Population"] / df["Population"].sum()
+                 * state_additional_doctors),
                 0,
             ).astype(int)
             df["Additional Nurses"] = np.round(
-                (df["Population"] / df["Population"].sum() * state_additional_nurses), 0
+                (df["Population"] / df["Population"].sum()
+                 * state_additional_nurses), 0
             ).astype(int)
 
             # Calculate new coverage with proposed additions
@@ -315,7 +319,8 @@ elif choose == "Health":
         df = pd.read_csv('Health Related Citizen Reports.csv')
 
         # Preprocess 'Event Date' column
-        df[['Event Date', 'Event Time']] = df['date'].str.split("T", expand=True)
+        df[['Event Date', 'Event Time']
+           ] = df['date'].str.split("T", expand=True)
         df['Event Date'] = pd.to_datetime(df['Event Date'])
 
         # Add a description
@@ -325,7 +330,6 @@ elif choose == "Health":
             The data highlights the occurrence of diseases such as cholera, measles, lassa fever, malaria, and others based on the comments provided by citizens.
             The most frequently reported outbreak is emphasized for quick identification.
             """)
-
 
         # Keywords and phrases for matching
         keywords = [
@@ -348,19 +352,25 @@ elif choose == "Health":
         # Function to extract relevant information
         def extract_information(comment):
             tokens = word_tokenize(comment.lower())
-            filtered_tokens = [word for word in tokens if word not in stop_words]
-            extracted_info = [word for word in filtered_tokens if word in keywords or word in phrases]
+            filtered_tokens = [
+                word for word in tokens if word not in stop_words]
+            extracted_info = [
+                word for word in filtered_tokens if word in keywords or word in phrases]
             return extracted_info
 
         # Apply the extraction function to the 'Any Comment' column
-        df['Extracted Info'] = df['comment'].apply(lambda x: extract_information(str(x)))
+        df['Extracted Info'] = df['comment'].apply(
+            lambda x: extract_information(str(x)))
 
         # Count occurrences of keywords
-        total_keyword_counts = Counter([item for sublist in df['Extracted Info'] for item in sublist if item in keywords])
+        total_keyword_counts = Counter(
+            [item for sublist in df['Extracted Info'] for item in sublist if item in keywords])
 
         # Convert the result to a DataFrame
-        keyword_counts_df = pd.DataFrame(total_keyword_counts.items(), columns=['Keyword', 'Count'])
-        keyword_counts_df = keyword_counts_df.sort_values(by='Count', ascending=False)
+        keyword_counts_df = pd.DataFrame(
+            total_keyword_counts.items(), columns=['Keyword', 'Count'])
+        keyword_counts_df = keyword_counts_df.sort_values(
+            by='Count', ascending=False)
 
         # Find the most frequent outbreak
         most_frequent_outbreak = keyword_counts_df.iloc[0] if not keyword_counts_df.empty else None
@@ -380,17 +390,21 @@ elif choose == "Health":
             )
 
             # Highlight the most frequent outbreak in red
-            fig_bar.update_traces(marker_color=['red' if keyword == most_frequent_outbreak['Keyword'] else 'orange' for keyword in keyword_counts_df['Keyword']])
+            fig_bar.update_traces(marker_color=[
+                                  'red' if keyword == most_frequent_outbreak['Keyword'] else 'orange' for keyword in keyword_counts_df['Keyword']])
 
             # Display the bar chart
             st.plotly_chart(fig_bar)
 
             # Highlight the most frequent outbreak
-            st.error(f"The most frequently reported outbreak is {str(most_frequent_outbreak['Keyword']).title()} with {most_frequent_outbreak['Count']} reports.")
+            st.error(
+                f"The most frequently reported outbreak is {str(most_frequent_outbreak['Keyword']).title()} with {most_frequent_outbreak['Count']} reports.")
 
         # Calculate weekly reports
-        df['Week'] = df['Event Date'].dt.to_period('W').apply(lambda r: r.start_time)
-        weekly_report_counts = df.groupby('Week').size().reset_index(name='Report Count')
+        df['Week'] = df['Event Date'].dt.to_period(
+            'W').apply(lambda r: r.start_time)
+        weekly_report_counts = df.groupby(
+            'Week').size().reset_index(name='Report Count')
 
         # Plotting the results using Plotly (Line Chart)
         fig_line = px.line(
@@ -405,9 +419,8 @@ elif choose == "Health":
         # Display the line chart
         st.plotly_chart(fig_line)
 
-        # Alert threshold setup     
+        # Alert threshold setup
         trigger(data=df, keywords=keywords)
-
 
     elif option == "Outpatient Scenario":
 
@@ -439,18 +452,21 @@ elif choose == "Health":
         df_scenario["PHC"] = df["PHC"] * (1 + phc_increase / 100)
 
         # Predict outpatient attendance for the scenario
-        predictions_scenario = model.predict(df_scenario[["PHC", "Population 2022"]])
+        predictions_scenario = model.predict(
+            df_scenario[["PHC", "Population 2022"]])
 
         for row in df["Outpatient Attendance"].index:
             if df.at[row, "Outpatient Attendance"] - predictions_scenario[row] < 0:
                 df.at[row, "New Outpatient Attendance"] = 0
             else:
                 df.at[row, "New Outpatient Attendance"] = (
-                    df.at[row, "Outpatient Attendance"] - predictions_scenario[row]
+                    df.at[row, "Outpatient Attendance"] -
+                    predictions_scenario[row]
                 )
 
         df_scenario["New PHC"] = np.round(df_scenario["PHC"])
-        df["New Outpatient Attendance"] = np.round(df["New Outpatient Attendance"])
+        df["New Outpatient Attendance"] = np.round(
+            df["New Outpatient Attendance"])
 
         # Compile the results into a dataframe
         scenario_results = pd.DataFrame(
@@ -543,7 +559,8 @@ elif choose == "Health":
         # Visualization
         st.write("#### Scenario Over All Local Government Area")
         st.bar_chart(
-            scenario_results.set_index("LGA")["Estimated Outpatient Attendance"]
+            scenario_results.set_index(
+                "LGA")["Estimated Outpatient Attendance"]
         )
 
     elif option == "Health Insurance":
@@ -577,8 +594,10 @@ elif choose == "Health":
             model_outpatient.fit(X, y_outpatient)
 
             # Predictions for the specified enrollment rate increase
-            predicted_death_rate = model_death.predict([[enrollment_rate_increase]])
-            predicted_inpatient = model_inpatient.predict([[enrollment_rate_increase]])
+            predicted_death_rate = model_death.predict(
+                [[enrollment_rate_increase]])
+            predicted_inpatient = model_inpatient.predict(
+                [[enrollment_rate_increase]])
             predicted_outpatient = model_outpatient.predict(
                 [[enrollment_rate_increase]]
             )
@@ -608,7 +627,8 @@ elif choose == "Health":
         st.write(lga_data.to_html(index=False), unsafe_allow_html=True)
 
         # Calculate adjusted values based on slider input
-        adjusted_enrollment_rate = lga_data["Enrollment Rate"] * (1 + adjustment / 100)
+        adjusted_enrollment_rate = lga_data["Enrollment Rate"] * \
+            (1 + adjustment / 100)
         lga_data["adjusted_enrollment_rate"] = adjusted_enrollment_rate
 
         # Prediction and display based on slider input
@@ -632,13 +652,17 @@ elif choose == "Health":
 
 elif choose == "Education":
 
+
     # Streamlit interface
-    st.write("This tool is designed to help education administrators and policymakers analyze and optimize the allocation of senior secondary school (SSS) teachers across the 18 Local Government Areas (LGAs) in Edo State.")
+    st.title("Teachers Allocation Scenario Analysis")
+    st.write(
+        "This tool is designed to help education administrators and policymakers analyze and optimize the allocation of senior secondary school (SSS) teachers across the 18 Local Government Areas (LGAs) in Edo State."
+    )
 
     # Load the data
     ta_df = pd.read_excel("teachers_allocation.xlsx")
 
-    option = st.selectbox("Select a Method", ("Input Parameters", "Optimal Coverage"), index=0,)
+    option = st.selectbox("Select a Method", ("Input Parameters", "Optimal Coverage"), index=0)
 
     # Group by 'LGA' and calculate the sum of 'Total Students' and 'Total Teachers' for each 'LGA'
     lga_ta = (ta_df.groupby("LGA").agg({"Total Students": "sum", "Total Teachers": "sum"}).reset_index())
@@ -646,13 +670,21 @@ elif choose == "Education":
     lga = st.selectbox("Select LGA", lga_ta["LGA"])
 
     # Function to calculate percentage coverage
-    def calculate_coverage(df, lga, additional_teachers, additional_students, ideal_students_per_teacher):
-        lga_row = df[df["LGA"] == lga] 
+    def calculate_coverage(
+        df, lga, additional_teachers, additional_students, ideal_students_per_teacher
+    ):
+        lga_row = df[df["LGA"] == lga]
         new_total_teachers = int(lga_row["Total Teachers"].values[0] + additional_teachers)
         new_total_students = lga_row["Total Students"].values[0] + additional_students
         new_actual_students_per_teacher = round(new_total_students / new_total_teachers, 0)
-        new_percentage_coverage = round((ideal_students_per_teacher / new_actual_students_per_teacher) * 100, 2)
-        new_status = "✅ OECD Standard" if new_actual_students_per_teacher <= ideal_students_per_teacher else "❌ Below OECD Standard"
+        new_percentage_coverage = round(
+            (ideal_students_per_teacher / new_actual_students_per_teacher) * 100, 2
+        )
+        new_status = (
+            "✅ OECD Standard"
+            if new_actual_students_per_teacher <= ideal_students_per_teacher
+            else "❌ Below OECD Standard"
+        )
 
         return new_total_students, new_total_teachers, new_percentage_coverage, new_status
 
@@ -672,8 +704,28 @@ elif choose == "Education":
         # Calculate the additional teachers needed
         additional_teachers = int(round(required_total_teachers - total_teachers, 0))
 
-        return (total_students, required_total_teachers, additional_teachers,
-        required_actual_students_per_teacher)
+        # Determine new status
+        new_status = (
+            "✅ OECD Standard"
+            if required_actual_students_per_teacher <= ideal_students_per_teacher
+            else "❌ Below OECD Standard"
+        )
+
+        # Calculate current percentage coverage
+        current_actual_students_per_teacher = round(total_students / total_teachers, 0)
+        current_percentage_coverage = round(
+            (ideal_students_per_teacher / current_actual_students_per_teacher) * 100, 2
+        )
+
+        return (
+            total_students,
+            required_total_teachers,
+            additional_teachers,
+            required_actual_students_per_teacher,
+            new_status,
+            current_percentage_coverage,
+        )
+
 
     global ideal_students_per_teacher
     global additional_teachers
@@ -683,43 +735,53 @@ elif choose == "Education":
     ideal_students_per_teacher = 15
 
     if option == "Input Parameters":
-        ideal_students_per_teacher = st.number_input("Enter number of ideal students per teacher", min_value=15, step=5)
-        additional_teachers = st.number_input("Enter number of additional teachers", min_value=0, step=1)
-        additional_students = st.number_input("Enter number of additional students", min_value=0, step=1)
+        ideal_students_per_teacher = st.number_input(
+            "Enter number of ideal students per teacher", min_value=15, step=5
+        )
+        additional_teachers = st.number_input(
+            "Enter number of additional teachers", min_value=0, step=1
+        )
+        additional_students = st.number_input(
+            "Enter number of additional students", min_value=0, step=1
+        )
         lga_ta["Total Teachers"] = lga_ta["Total Teachers"].astype(int)
 
         # Calculate the actual number of students per teacher in each LGA
         lga_ta["Actual Students Per Teacher"] = round(lga_ta["Total Students"] / lga_ta["Total Teachers"], 0).astype(int)
 
         # Calculate the percentage coverage in each LGA
-        lga_ta["Percentage Coverage"] = round((ideal_students_per_teacher / lga_ta["Actual Students Per Teacher"]) * 100, 2)
+        lga_ta["Percentage Coverage"] = round(
+            (ideal_students_per_teacher / lga_ta["Actual Students Per Teacher"]) * 100, 2
+        )
 
         # Determine status based on whether the ideal ratio is met
-        lga_ta['Status'] = lga_ta['Actual Students Per Teacher'].apply(
-        lambda x: "✅ OECD Standard" if x <= ideal_students_per_teacher else "❌ Below OECD Standard")
+        lga_ta["Status"] = lga_ta["Actual Students Per Teacher"].apply(
+            lambda x: "✅ OECD Standard"
+            if x <= ideal_students_per_teacher
+            else "❌ Below OECD Standard"
+        )
 
         lga_ta = lga_ta.sort_values(by="Percentage Coverage", ascending=True)
 
         # Calculate coverage and display results in a new table
         if st.button("Calculate Coverage"):
-            new_total_students, new_total_teachers, new_percentage_coverage, new_status = (
-                    calculate_coverage(
-                        lga_ta,
-                        lga,
-                        additional_teachers,
-                        additional_students,
-                        ideal_students_per_teacher,
-                    )
-                )
+            (
+                new_total_students,
+                new_total_teachers,
+                new_percentage_coverage,
+                new_status,
+            ) = calculate_coverage(
+                lga_ta, lga, additional_teachers, additional_students, ideal_students_per_teacher
+            )
             new_data = {
-                    "LGA": [lga],
-                    "Additional Teachers": [additional_teachers],
-                    "Additional Students": [additional_students],
-                    "New Total Students": [new_total_students],
-                    "New Total Teachers": [new_total_teachers],
-                    "New Percentage Coverage": [new_percentage_coverage],
-                    "New Status": [new_status]
-                }
+                "LGA": [lga],
+                "Additional Teachers": [additional_teachers],
+                "Additional Students": [additional_students],
+                "New Total Students": [new_total_students],
+                "New Total Teachers": [new_total_teachers],
+                "New Percentage Coverage": [new_percentage_coverage],
+                "New Status": [new_status],
+            }
             new_df = pd.DataFrame(new_data)
             st.subheader("New Coverage Data")
             st.write(new_df.to_html(index=False), unsafe_allow_html=True)
@@ -739,19 +801,24 @@ elif choose == "Education":
                 required_total_teachers,
                 additional_teachers,
                 required_actual_students_per_teacher,
-                ) = calculate_coverage_to_reach(
-                    lga_ta, lga, target_coverage, ideal_students_per_teacher
-                )
+                new_status,
+                current_percentage_coverage,
+            ) = calculate_coverage_to_reach(
+                lga_ta, lga, target_coverage, ideal_students_per_teacher
+            )
+
             new_data = {
-                    "LGA": [lga],
-                    "Total Students": [total_students],
-                    "Current Total Teachers": [
-                        lga_ta[lga_ta["LGA"] == lga]["Total Teachers"].values[0]
-                    ],
-                    "Required Total Teachers": [round(required_total_teachers, 2)],
-                    "Additional Teachers Needed": [round(additional_teachers, 2)],
-                    "Target Percentage Coverage": [target_coverage],
-                }
+                "LGA": [lga],
+                "Total Students": [total_students],
+                "Current Total Teachers": [
+                    lga_ta[lga_ta["LGA"] == lga]["Total Teachers"].values[0]
+                ],
+                "Required Total Teachers": [round(required_total_teachers, 2)],
+                "Additional Teachers Needed": [round(additional_teachers, 2)],
+                "Target Percentage Coverage": [target_coverage],
+                "Current Percentage Coverage": [current_percentage_coverage],  # Add current coverage
+                "New Status": [new_status],  # Add status based on ideal ratio
+            }
             new_df = pd.DataFrame(new_data)
             st.subheader("New Coverage Data")
             st.write(new_df.to_html(index=False), unsafe_allow_html=True)
@@ -939,7 +1006,8 @@ elif choose == "Agriculture":
     # agric_activity = ['Crop', 'Crop and Livestock', 'Aquaculture', 'Livestock','Crop and Aquaculture', 'Crop, Aquaculture and Livestock','Crop ']
     cooperative = ["No", "Yes"]
     No_agric_activity = ["'1-3'", "'4-7'", "'8-11'"]
-    Incom = ["0-100k", "100k-1m", "1m-10m", "10m-100m", "100m-500m", "500m and above"]
+    Incom = ["0-100k", "100k-1m", "1m-10m",
+             "10m-100m", "100m-500m", "500m and above"]
     loan = ["Yes", "No"]
     Food = ["Yes", "No"]
     Cash = ["Yes", "No"]
@@ -953,7 +1021,8 @@ elif choose == "Agriculture":
         st.markdown('<div class="section">', unsafe_allow_html=True)
         ag = st.number_input("How old are you?", value=0)
         edu = st.selectbox("Educational Level", edu_level)
-        id_ = st.selectbox("Do you have a mode of Identification (ID card)?", ID)
+        id_ = st.selectbox(
+            "Do you have a mode of Identification (ID card)?", ID)
 
         st.header("Financial Information")
         st.markdown('<div class="section">', unsafe_allow_html=True)
@@ -967,7 +1036,8 @@ elif choose == "Agriculture":
         st.header("Farm Land Information")
         st.markdown('<div class="section">', unsafe_allow_html=True)
         ten = st.selectbox("Do you own your farmland?", land_ten)
-        farmsize = st.selectbox("What is the size of your farm land?", farm_size)
+        farmsize = st.selectbox(
+            "What is the size of your farm land?", farm_size)
 
         st.header("Agricultural Activity")
         st.markdown('<div class="section">', unsafe_allow_html=True)
