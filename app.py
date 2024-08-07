@@ -82,7 +82,7 @@ if choose == "Home":
 elif choose == "Health":
 
     option = st.selectbox(
-        "",
+        "Select a Health Scenario",
         ("Health Worker Allocation", "Health Insurance",
          "Outpatient Scenario", "Early Warning Alert System"),
         index=0,
