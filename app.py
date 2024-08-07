@@ -5,7 +5,7 @@ from collections import Counter
 import plotly.express as px
 from datetime import datetime, timedelta
 from streamlit_option_menu import option_menu
-from slideshow import slideshow
+# from slideshow import slideshow
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 import warnings
@@ -15,6 +15,7 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from calculate_threshold_and_alert import trigger
 from style_css import style
+from carousel import slideshow
 
 # Set the NLTK data path to the local directory
 nltk_data_path = os.path.join(os.path.dirname(__file__), 'nltk_data')
@@ -68,10 +69,11 @@ if choose == "Home":
     st.title("Welcome To EdoDida")
     st.write(
         """
-                Welcome to Edo State Digital and Data Agency (EdoDiDa) Integrated Data and Analytics platform, the one-stop data and analytics playground.
-                The EdoDiDa integrated data governance and decision intelligence platform delivers comprehensive data and analytics solutions designed to
-                empower the Edo State government. Our platform supports evidence-based planning, promotes inclusive socio-economic development,
-                and facilitates equitable resource allocation.
+                Welcome to Edo State Digital and Data Agency (EdoDiDa) Integrated Data and Scenario Analytics platform.
+
+                The EdoDiDa integrated data governance and decision intelligence platform delivers comprehensive data and analytics solutions designed to empower the Edo State government.
+                
+                Our platform supports evidence-based planning, promotes inclusive socio-economic development, and facilitates equitable resource allocation.
             """
     )
     st.divider()
@@ -81,13 +83,14 @@ if choose == "Home":
 
 elif choose == "Health":
 
+    st.write("##### Select a Health Scenario")
+
     option = st.selectbox(
         "",
-        ("Health Worker Allocation", "Health Insurance",
-         "Outpatient Scenario", "Early Warning Alert System"),
+        ("Health Worker Allocation", "Health Insurance", "Outpatient Scenario", "Early Warning Alert System"),
         index=0,
     )
-
+    
     if option == "Health Worker Allocation":
 
         st.write(
@@ -652,7 +655,6 @@ elif choose == "Health":
 
 elif choose == "Education":
 
-
     # Streamlit interface
     st.title("Teachers Allocation Scenario Analysis")
     st.write(
@@ -662,7 +664,7 @@ elif choose == "Education":
     # Load the data
     ta_df = pd.read_excel("teachers_allocation.xlsx")
 
-    option = st.selectbox("Select a Method", ("Input Parameters", "Optimal Coverage"), index=0)
+    option = st.selectbox("Select a Option", ("Input Parameters", "Optimal Coverage"), index=0)
 
     # Group by 'LGA' and calculate the sum of 'Total Students' and 'Total Teachers' for each 'LGA'
     lga_ta = (ta_df.groupby("LGA").agg({"Total Students": "sum", "Total Teachers": "sum"}).reset_index())
@@ -1126,7 +1128,6 @@ elif choose == "Contact":
     pass
 
 # the footer and more information
-st.divider()
 st.markdown(
     """<p style="color:white ; text-align:center;font-size:15px;"> Copyright | DSNai 2024(c) </p>
     """,
