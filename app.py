@@ -573,6 +573,15 @@ elif choose == "Health":
         # Sidebar title and header
         st.title("EHIC Scenario Analysis")
 
+        # Explanation of the scenario analysis
+
+        st.write(
+            """
+            The EHIC Scenario Analysis is designed to evaluate the implications or effects of increasing the health insurance enrollment rate on various health metrics, such as death rate, inpatients, and outpatients per Local Government Area (LGA). By adjusting the enrollment rate, we can predict and analyze how changes in health insurance coverage can impact the overall health outcomes in different regions. This allows Edo State Government and stakeholders to make informed decisions based on data-driven insights.
+            """
+        )
+
+
         # Dropdown to select LGA
         selected_lga = st.selectbox("Select LGA", df["LGA"])
 
@@ -610,17 +619,6 @@ elif choose == "Health":
                 predicted_inpatient[0],
                 predicted_outpatient[0],
             )
-
-        # Main content area
-        st.subheader("EHIC Scenario Analysis")
-
-        # Explanation of the scenario analysis
-        st.write(
-            """
-                #### Objective:
-                The EHIC Scenario Analysis is designed to evaluate the implications or effects of increasing the health insurance enrollment rate on various health metrics, such as death rate, inpatients, and outpatients per Local Government Area (LGA). By adjusting the enrollment rate, we can predict and analyze how changes in health insurance coverage can impact the overall health outcomes in different regions. This allows Edo State Government and stakeholders to make informed decisions based on data-driven insights.
-                 """
-        )
 
         # Filter data for the selected LGA
         lga_data = df[df["LGA"] == selected_lga]
