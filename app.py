@@ -4,7 +4,7 @@ import streamlit as st
 from collections import Counter
 import plotly.express as px
 from datetime import datetime, timedelta
-from streamlit_option_menu import option_menu
+from streamlit_option_menu import option_menu # type: ignore
 # from slideshow import slideshow
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
